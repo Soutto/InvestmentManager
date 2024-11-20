@@ -1,0 +1,146 @@
+﻿@using System.Net.Http.Json
+@using InvestmentManager.Models
+@using InvestmentManager.Services.Interfaces
+@using MudBlazor
+@using Microsoft.AspNetCore.Authorization
+
+@inject HttpClient httpClient
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider GetAuthenticationStateAsync
+@inject ITransactionService _transactionService
+
+@page "/transactions"
+
+@attribute [Authorize]
+
+<PageTitle>Transações</PageTitle>
+
+<MudTable Items="@Transactionss" Loading="@isLoading" Dense="false" Hover="true" ReadOnly="false" CanCancelEdit="true"
+          Filter="new Func<Transaction,bool>(FilterFunc)" @bind-SelectedItem="selectedItem1" SortLabel="Sort By"
+          CommitEditTooltip="Commit Edit" OnCommitEditClick="@(() => Snackbar.Add("Commit Edit Handler Invoked"))"
+          RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues" RowEditCommit="ItemHasBeenCommitted"
+          IsEditRowSwitchingBlocked="true" ApplyButtonPosition="TableApplyButtonPosition.End"
+          EditTrigger="TableEditTrigger.RowClick">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Periodic Transactions</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.TransactionDate)">Data Transação</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Transaction, object>(x=>x.Ticker)">Código do Ativo</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.PricePerShare)">Preço por ativo</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Data Transação">@context.TransactionDate</MudTd>
+        <MudTd DataLabel="Código do ativo">@context.Ticker</MudTd>
+        <MudTd DataLabel="Preço do ativo">@context.PricePerShare</MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Data Transação">@context.TransactionDate</MudTd>
+        <MudTd DataLabel="Código do Ativo">
+            <MudTextField @bind-Value="context.Ticker" Required />
+        </MudTd>
+        <MudTd DataLabel="Preço do ativo">
+            <MudNumericField @bind-Value="context.PricePerShare" Required Min="1" />
+        </MudTd>
+    </RowEditingTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+    <EditButtonContent Context="button">
+        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+    </EditButtonContent>
+</MudTable>
+
+<MudText HtmlTag="span">Selected1: @selectedItem1?.Ticker</MudText>
+
+<MudExpansionPanels Style="flex: 1;">
+    <MudExpansionPanel Text="Show inline-edit event log">
+        @foreach (var message in editEvents)
+        {
+            <MudText>@message</MudText>
+        }
+        @if (editEvents.Count > 0)
+        {
+            <div class="d-flex">
+                <MudSpacer />
+                <MudButton Class="mt-3" ButtonType="ButtonType.Button" Variant="Variant.Filled" OnClick="ClearEventLog">Clear event log</MudButton>
+            </div>
+        }
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@code {
+    private List<string> editEvents = new();
+    private string searchString = "";
+    private Transaction selectedItem1 = null;
+    private Transaction elementBeforeEdit;
+    private IEnumerable<Transaction> Transactionss = new List<Transaction>();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(2000);
+        string? userId = await GetUserIdAsync();
+        if (!string.IsNullOrEmpty(userId))
+        {
+            Transactionss = await _transactionService.GetAllByUserIdAsync(userId);
+        }
+        isLoading = false;
+    }
+
+    private void ClearEventLog()
+    {
+        editEvents.Clear();
+    }
+
+    private void AddEditionEvent(string message)
+    {
+        editEvents.Add(message);
+        StateHasChanged();
+    }
+
+    private void BackupItem(object element)
+    {
+        elementBeforeEdit = new()
+            {
+                TransactionDate = ((Transaction)element).TransactionDate,
+                Ticker = ((Transaction)element).Ticker,
+                PricePerShare = ((Transaction)element).PricePerShare,
+            };
+        AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Ticker}");
+    }
+
+    private void ItemHasBeenCommitted(object element)
+    {
+        AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Ticker} committed");
+    }
+
+    private void ResetItemToOriginalValues(object element)
+    {
+        ((Transaction)element).TransactionDate = elementBeforeEdit.TransactionDate;
+        ((Transaction)element).Ticker = elementBeforeEdit.Ticker;
+        ((Transaction)element).PricePerShare = elementBeforeEdit.PricePerShare;
+        AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Ticker} canceled");
+    }
+
+    private bool FilterFunc(Transaction element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private async Task<string?> GetUserIdAsync()
+    {
+        var authstate = await GetAuthenticationStateAsync.GetAuthenticationStateAsync();
+        if (authstate.User.Identity != null && authstate.User.Identity.IsAuthenticated)
+        {
+            return authstate.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+        return string.Empty;
+    }
+}

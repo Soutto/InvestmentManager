@@ -5,6 +5,10 @@ using MudBlazor.Services;
 using InvestmentManager.Components;
 using InvestmentManager.Components.Account;
 using InvestmentManager.Data;
+using InvestmentManager.Data.Repositories.Interfaces;
+using PortofolioManager.Infrastructure.Repositories;
+using InvestmentManager.Services;
+using InvestmentManager.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +42,14 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddHttpClient();
+#region Repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+#endregion
+#region Services
+//builder.Services.AddScoped<BrapiIntegrationService, BrapiIntegrationService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+#endregion
 
 var app = builder.Build();
 
