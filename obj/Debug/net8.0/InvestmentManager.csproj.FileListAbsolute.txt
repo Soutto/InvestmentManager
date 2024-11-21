@@ -178,3 +178,4 @@ C:\Users\Usuário\Desktop\Repositorios\InvestmentManager\obj\Debug\net8.0\refint
 C:\Users\Usuário\Desktop\Repositorios\InvestmentManager\obj\Debug\net8.0\InvestmentManager.pdb
 C:\Users\Usuário\Desktop\Repositorios\InvestmentManager\obj\Debug\net8.0\InvestmentManager.genruntimeconfig.cache
 C:\Users\Usuário\Desktop\Repositorios\InvestmentManager\obj\Debug\net8.0\ref\InvestmentManager.dll
+C:\Users\Usuário\Desktop\Repositorios\InvestmentManager\obj\Debug\net8.0\InvestmentManager.sourcelink.json

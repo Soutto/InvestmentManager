@@ -92,7 +92,7 @@ namespace InvestmentManager.Models
         /// Type of the asset being transacted (e.g., Stock, Cryptocurrency).
         /// </summary>
         [Required]
-        AssetType Type { get; set; }
+        public AssetType Type { get; set; }
 
         [ForeignKey("UserId")]
         public ApplicationUser? User { get; set; }
