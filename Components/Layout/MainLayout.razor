@@ -5,12 +5,24 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-    </MudAppBar>
+<MudAppBar Elevation="1" Class="app-bar">
+    <!-- Botão do menu à esquerda -->
+    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+
+    <!-- Espaçador flexível -->
+    <div class="flex-spacer"></div>
+
+    <!-- Imagem centralizada -->
+    <MudImage Src="Envistus Logo (1).svg" Alt="Application Logo" Class="app-logo" Width="200" Height="200" />
+
+    <!-- Espaçador flexível -->
+    <div class="flex-spacer"></div>
+
+    <!-- Botão à direita -->
+    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+</MudAppBar>
+
+
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <NavMenu />
     </MudDrawer>
@@ -36,4 +48,18 @@
 
 }
 
+<style>
+    .app-bar {
+    background: linear-gradient(90deg, #1A237E, #0D47A1);
+    color: white;
+    display: flex;
+}
 
+.flex-spacer {
+    flex: 1;
+}
+
+.app-logo {
+    /* Se necessário, ajuste a margem ou outros estilos aqui */
+}
+</style>

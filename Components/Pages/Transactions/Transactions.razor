@@ -3,172 +3,174 @@
 @using InvestmentManager.Services.Interfaces
 @using MudBlazor
 @using Microsoft.AspNetCore.Authorization
-
 @inject HttpClient httpClient
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider GetAuthenticationStateAsync
 @inject ITransactionService _transactionService
-
 @page "/transactions"
-
 @attribute [Authorize]
-
 <PageTitle>Transações</PageTitle>
-
-<MudPaper Class="pa-4">
-    <MudText Typo="Typo.h5">Transações</MudText>
-    <MudTable Items="@filteredTransactions" Loading="@isLoading" Dense="false" Hover="true" ReadOnly="false"
-              Filter="new Func<Transaction, bool>(FilterFunc)" @bind-SelectedItem="selectedItem" SortLabel="Ordenar por"
-              RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues" RowEditCommit="ItemHasBeenCommitted"
-              IsEditRowSwitchingBlocked="true" ApplyButtonPosition="TableApplyButtonPosition.End"
-              EditTrigger="TableEditTrigger.RowClick">
-        <ToolBarContent>
+<MudTable Items="@filteredTransactions" Loading="@isLoading" Dense="false" Hover="true" ReadOnly="false" CanCancelEdit="true"
+          Filter="new Func<Transaction,bool>(FilterFunc)" @bind-SelectedItem="selectedItem1" SortLabel="Sort By"
+          CommitEditTooltip="Commit Edit" OnCommitEditClick="@(() => Snackbar.Add("Commit Edit Handler Invoked"))"
+          RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues" RowEditCommit="ItemHasBeenCommitted"
+          IsEditRowSwitchingBlocked="true" ApplyButtonPosition="TableApplyButtonPosition.End"
+          EditTrigger="TableEditTrigger.RowClick">
+       <ToolBarContent>
             <MudSelect T="string" Label="Tipo de Transação" @bind-Value="selectedTransactionType" Variant="Variant.Outlined">
-                <MudSelectItem Value="All">Todos</MudSelectItem>
-                <MudSelectItem Value="Purchase">Compras</MudSelectItem>
-                <MudSelectItem Value="Sale">Vendas</MudSelectItem>
+                <MudSelectItem Value="@All">Todos</MudSelectItem>
+                <MudSelectItem Value="@Purchase">Compras</MudSelectItem>
+                <MudSelectItem Value="@Sale">Vendas</MudSelectItem>
             </MudSelect>
             <MudSpacer />
             <MudTextField @bind-Value="searchString" Placeholder="Pesquisar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
         </ToolBarContent>
-        <HeaderContent>
-            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Data Transação</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.IsBuy)">Tipo</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Ticker)">Código do Ativo</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.PricePerShare)">Preço por Ativo</MudTableSortLabel></MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Data Transação">@context.TransactionDate.ToString("dd/MM/yyyy")</MudTd>
-            <MudTd DataLabel="Tipo">
-                @if (context.IsBuy)
-                {
-                    <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Compra</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Venda</MudChip>
-                }
-            </MudTd>
-            <MudTd DataLabel="Código do Ativo">@context.Ticker</MudTd>
-            <MudTd DataLabel="Preço por Ativo">@context.PricePerShare</MudTd>
-        </RowTemplate>
-        <RowEditingTemplate>
-            <MudTd DataLabel="Data Transação">
-                <MudDatePicker @bind-Date="context.TransactionDate" Required="true" />
-            </MudTd>
-            <MudTd DataLabel="Tipo">
-                <MudSelect T="bool" @bind-Value="context.IsBuy" Required="true">
-                    <MudSelectItem Value="true">Compra</MudSelectItem>
-                    <MudSelectItem Value="false">Venda</MudSelectItem>
-                </MudSelect>
-            </MudTd>
-            <MudTd DataLabel="Código do Ativo">
-                <MudTextField @bind-Value="context.Ticker" Required="true" />
-            </MudTd>
-            <MudTd DataLabel="Preço por Ativo">
-                <MudNumericField @bind-Value="context.PricePerShare" Required="true" Min="0" />
-            </MudTd>
-        </RowEditingTemplate>
-        <PagerContent>
-            <MudTablePager />
-        </PagerContent>
-    </MudTable>
-
-    <MudText HtmlTag="span">Selecionado: @selectedItem?.Ticker</MudText>
-
-    <MudExpansionPanels Style="flex: 1;">
-        <MudExpansionPanel Text="Mostrar log de edição">
-            @foreach (var message in editEvents)
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.TransactionDate)">Data</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Transaction, object>(x=>x.Ticker)">Código</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.PricePerShare)">Preço R$</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.IsBuy)">Compra/Venda</MudTableSortLabel></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Data">@context.TransactionDate</MudTd>
+        <MudTd DataLabel="Código">@context.Ticker</MudTd>
+        <MudTd DataLabel="Preço R$">@context.PricePerShare</MudTd>
+        <MudTd DataLabel="Tipo">
+            @if (context.IsBuy)
             {
-                <MudText>@message</MudText>
+                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward">
+                    Compra
+                </MudChip>
             }
-            @if (editEvents.Count > 0)
+            else
             {
-                <div class="d-flex">
-                    <MudSpacer />
-                    <MudButton Class="mt-3" Variant="Variant.Filled" OnClick="ClearEventLog">Limpar log</MudButton>
-                </div>
+                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward">
+                    Venda
+                </MudChip>
             }
-        </MudExpansionPanel>
-    </MudExpansionPanels>
-</MudPaper>
+        </MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Data">@context.TransactionDate</MudTd>
+        <MudTd DataLabel="Código">
+            <MudTextField @bind-Value="context.Ticker" Required />
+        </MudTd>
+        <MudTd DataLabel="Preço">
+            <MudNumericField @bind-Value="context.PricePerShare" Required Min="1" />
+        </MudTd>
+                <MudTd DataLabel="Tipo">
+            @if (context.IsBuy)
+            {
+                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward">
+                    Compra
+                </MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward">
+                    Venda
+                </MudChip>
+            }
+        </MudTd>
+    </RowEditingTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+    <EditButtonContent Context="button">
+        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+    </EditButtonContent>
+</MudTable>
 
+<MudText HtmlTag="span">Selected1: @selectedItem1?.Ticker</MudText>
+<MudExpansionPanels Style="flex: 1;">
+    <MudExpansionPanel Text="Show inline-edit event log">
+        @foreach (var message in editEvents)
+        {
+            <MudText>@message</MudText>
+        }
+        @if (editEvents.Count > 0)
+        {
+            <div class="d-flex">
+                <MudSpacer />
+                <MudButton Class="mt-3" ButtonType="ButtonType.Button" Variant="Variant.Filled" OnClick="ClearEventLog">Clear event log</MudButton>
+            </div>
+        }
+    </MudExpansionPanel>
+</MudExpansionPanels>
 @code {
-    private IEnumerable<Transaction> Transactionss = new List<Transaction>();
-    private IEnumerable<Transaction> filteredTransactions => Transactionss.Where(FilterFunc);
-
     private List<string> editEvents = new();
     private string searchString = "";
-    private string selectedTransactionType = "All";
-    private Transaction? selectedItem = null;
-    private Transaction? elementBeforeEdit = null;
+    private Transaction selectedItem1 = null;
+    private Transaction elementBeforeEdit;
+    private IEnumerable<Transaction> transactionList = new List<Transaction>();
     private bool isLoading = true;
+
+    private const string All = "All";
+    private const string Purchase = "Purchase";
+    private const string Sale = "Sale";
+    private string selectedTransactionType = "All";
+    private IEnumerable<Transaction> filteredTransactions => transactionList.Where(FilterFunc);
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
+        await Task.Delay(1000);
         string? userId = await GetUserIdAsync();
         if (!string.IsNullOrEmpty(userId))
         {
-            Transactionss = await _transactionService.GetAllByUserIdAsync(userId);
+            transactionList = await _transactionService.GetAllByUserIdAsync(userId);
         }
         isLoading = false;
     }
-
-    private bool FilterFunc(Transaction element)
-    {
-        bool matchesSearch = string.IsNullOrWhiteSpace(searchString) ||
-                             element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase);
-
-        bool matchesType = selectedTransactionType == "All" ||
-                           (selectedTransactionType == "Purchase" && element.IsBuy) ||
-                           (selectedTransactionType == "Sale" && !element.IsBuy);
-
-        return matchesSearch && matchesType;
-    }
-
     private void ClearEventLog()
     {
         editEvents.Clear();
     }
-
     private void AddEditionEvent(string message)
     {
         editEvents.Add(message);
         StateHasChanged();
     }
-
-    private void BackupItem(Transaction element)
+    private void BackupItem(object element)
     {
-        elementBeforeEdit = new Transaction
-        {
-            TransactionDate = element.TransactionDate,
-            Ticker = element.Ticker,
-            PricePerShare = element.PricePerShare,
-            IsBuy = element.IsBuy,
-            // Add other properties as needed
-        };
-        AddEditionEvent($"Backup realizado para o ativo {element.Ticker}");
+        elementBeforeEdit = new()
+            {
+                TransactionDate = ((Transaction)element).TransactionDate,
+                Ticker = ((Transaction)element).Ticker,
+                PricePerShare = ((Transaction)element).PricePerShare,
+            };
+        AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Ticker}");
     }
-
-    private void ResetItemToOriginalValues(Transaction element)
+    private void ItemHasBeenCommitted(object element)
     {
-        if (elementBeforeEdit != null)
-        {
-            element.TransactionDate = elementBeforeEdit.TransactionDate;
-            element.Ticker = elementBeforeEdit.Ticker;
-            element.PricePerShare = elementBeforeEdit.PricePerShare;
-            element.IsBuy = elementBeforeEdit.IsBuy;
-            AddEditionEvent($"Edição cancelada para o ativo {element.Ticker}");
-        }
+        AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Ticker} committed");
     }
-
-    private void ItemHasBeenCommitted(Transaction element)
+    private void ResetItemToOriginalValues(object element)
     {
-        AddEditionEvent($"Alterações confirmadas para o ativo {element.Ticker}");
-        // Save changes to the database or data source
+        ((Transaction)element).TransactionDate = elementBeforeEdit.TransactionDate;
+        ((Transaction)element).Ticker = elementBeforeEdit.Ticker;
+        ((Transaction)element).PricePerShare = elementBeforeEdit.PricePerShare;
+        AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Ticker} canceled");
     }
+    private bool FilterFunc(Transaction element)
+    {
+                // Filter by search string
+        bool matchesSearch = string.IsNullOrWhiteSpace(searchString) ||
+                             element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase);
 
+    // Filtra por tipo de transação
+    bool matchesType = selectedTransactionType == All ||
+                       (selectedTransactionType == Purchase && element.IsBuy) ||
+                       (selectedTransactionType == Sale && !element.IsBuy);
+
+    return matchesSearch && matchesType;
+
+
+        /*if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;*/
+    }
     private async Task<string?> GetUserIdAsync()
     {
         var authstate = await GetAuthenticationStateAsync.GetAuthenticationStateAsync();
@@ -176,6 +178,6 @@
         {
             return authstate.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
-        return null;
+        return string.Empty;
     }
 }
