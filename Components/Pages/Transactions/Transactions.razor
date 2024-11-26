@@ -231,8 +231,8 @@
     <MudTablePager />
   </PagerContent>
   <EditButtonContent Context="button">
-    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
-    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Delete" Class="pa-0" @onclick="_ => DeleteTransaction(button.Item)" Disabled="@button.ButtonDisabled" />
+    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Edit" Class="pa-1" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Delete" Class="pa-1" @onclick="_ => DeleteTransaction(button.Item)" Disabled="@button.ButtonDisabled" />
   </EditButtonContent>
 </MudTable>
 </MudPaper>
@@ -251,6 +251,16 @@
 
 
 <style>
+    /* Ocultar os botões por padrão */
+    .pa-1 {
+        visibility: hidden;
+    }
+
+    /* Mostrar os botões quando a linha é focada pelo mouse */
+    .mud-table-row:hover .pa-1 {
+        visibility: visible;
+    }
+
         .custom-toolbar-bg {
         background-color: #F5F5F5; /* Substitua pela cor desejada */
     }

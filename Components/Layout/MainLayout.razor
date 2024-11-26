@@ -13,7 +13,10 @@
     <div class="flex-spacer"></div>
 
     <!-- Imagem centralizada -->
-    <MudImage Src="Envistus Logo (1).svg" Alt="Application Logo" Class="app-logo" Width="200" Height="200" />
+    <MudLink Href="/">
+        <MudImage Src="logo.svg" Alt="Application Logo" Class="app-logo" Width="200" Height="200" />
+    </MudLink>
+
 
     <!-- Espaçador flexível -->
     <div class="flex-spacer"></div>
@@ -39,7 +42,7 @@
 </div>
 
 @code {
-    private bool _drawerOpen = true;
+    private bool _drawerOpen = false;
 
     private void DrawerToggle()
     {
