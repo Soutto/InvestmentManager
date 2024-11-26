@@ -9,11 +9,16 @@ using InvestmentManager.Data.Repositories.Interfaces;
 using PortofolioManager.Infrastructure.Repositories;
 using InvestmentManager.Services;
 using InvestmentManager.Services.Interfaces;
+using MudBlazor.Translations;
+using MudBlazor;
+using InvestmentManager.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
+builder.Services.AddMudTranslations();
+builder.Services.AddTransient<MudLocalizer, CustomMudBlazorLocalizer>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

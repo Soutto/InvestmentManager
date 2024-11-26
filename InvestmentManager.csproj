@@ -20,6 +20,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.*" />
     <PackageReference Include="MudBlazor" Version="7.*" />
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="2.*" />
+    <PackageReference Include="MudBlazor.Translations" Version="1.5.1" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿@using System.Net.Http.Json
 @using InvestmentManager.Models
+@using InvestmentManager.Models.Enums
 @using InvestmentManager.Services.Interfaces
 @using MudBlazor
 @using Microsoft.AspNetCore.Authorization
@@ -9,115 +10,342 @@
 @inject ITransactionService _transactionService
 @page "/transactions"
 @attribute [Authorize]
-<PageTitle>Transações</PageTitle>
-<MudTable Items="@filteredTransactions" Loading="@isLoading" Dense="false" Hover="true" ReadOnly="false" CanCancelEdit="true"
-          Filter="new Func<Transaction,bool>(FilterFunc)" @bind-SelectedItem="selectedItem1" SortLabel="Sort By"
-          CommitEditTooltip="Commit Edit" OnCommitEditClick="@(() => Snackbar.Add("Commit Edit Handler Invoked"))"
-          RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues" RowEditCommit="ItemHasBeenCommitted"
-          IsEditRowSwitchingBlocked="true" ApplyButtonPosition="TableApplyButtonPosition.End"
-          EditTrigger="TableEditTrigger.RowClick">
-       <ToolBarContent>
-            <MudSelect T="string" Label="Tipo de Transação" @bind-Value="selectedTransactionType" Variant="Variant.Outlined">
-                <MudSelectItem Value="@All">Todos</MudSelectItem>
-                <MudSelectItem Value="@Purchase">Compras</MudSelectItem>
-                <MudSelectItem Value="@Sale">Vendas</MudSelectItem>
-            </MudSelect>
-            <MudSpacer />
-            <MudTextField @bind-Value="searchString" Placeholder="Pesquisar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-        </ToolBarContent>
-    <HeaderContent>
-        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.TransactionDate)">Data</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Transaction, object>(x=>x.Ticker)">Código</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.PricePerShare)">Preço R$</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x=>x.IsBuy)">Compra/Venda</MudTableSortLabel></MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Data">@context.TransactionDate</MudTd>
-        <MudTd DataLabel="Código">@context.Ticker</MudTd>
-        <MudTd DataLabel="Preço R$">@context.PricePerShare</MudTd>
-        <MudTd DataLabel="Tipo">
-            @if (context.IsBuy)
-            {
-                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward">
-                    Compra
-                </MudChip>
-            }
-            else
-            {
-                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward">
-                    Venda
-                </MudChip>
-            }
-        </MudTd>
-    </RowTemplate>
-    <RowEditingTemplate>
-        <MudTd DataLabel="Data">@context.TransactionDate</MudTd>
-        <MudTd DataLabel="Código">
-            <MudTextField @bind-Value="context.Ticker" Required />
-        </MudTd>
-        <MudTd DataLabel="Preço">
-            <MudNumericField @bind-Value="context.PricePerShare" Required Min="1" />
-        </MudTd>
-                <MudTd DataLabel="Tipo">
-            @if (context.IsBuy)
-            {
-                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward">
-                    Compra
-                </MudChip>
-            }
-            else
-            {
-                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward">
-                    Venda
-                </MudChip>
-            }
-        </MudTd>
-    </RowEditingTemplate>
-    <PagerContent>
-        <MudTablePager />
-    </PagerContent>
-    <EditButtonContent Context="button">
-        <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
-    </EditButtonContent>
-</MudTable>
 
+<PageTitle>Transações</PageTitle>
+
+<!-- Novo formulário de adição rápida em uma linha horizontal -->
+<MudButton 
+    Variant="Variant.Filled" 
+    Style="background-color: #1976D2; color: white;" 
+    OnClick="ToggleAddForm" 
+    StartIcon="@(isAddFormVisible ? Icons.Material.Filled.Close : Icons.Material.Filled.Add)" 
+    Class="mb-2 p-4" 
+    Elevation="1">
+</MudButton>
+    <MudTooltip Text="Certifique-se de que as colunas do arquivo seguem o formato padrão do Excel gerado no site da B3.">
+    <MudButton Variant="Variant.Filled" Style="background-color: #64B5F6;color: white;" StartIcon="@Icons.Material.Filled.UploadFile" OnClick="ImportFromExcel" Class="mb-2 p-4" >
+    </MudButton>
+    </MudTooltip>
+<MudCollapse @bind-Expanded="isAddFormVisible">
+<MudPaper Class="mb-4 p-4" Elevation="1">
+    <MudForm Model="@newTransaction" @ref="quickAddForm" OnValidSubmit="AddTransaction">
+        		<MudCardContent Class="pa-0">
+
+			<MudTable Items="new List<Transaction> {newTransaction}" Hover="true" Breakpoint="Breakpoint.None" Dense="true" Elevation="0" Style="background-color: #F5F5F5;">
+				<HeaderContent>
+					<MudTh Class="table-header">Código</MudTh>
+					<MudTh Class="table-header">Tipo</MudTh>
+                    <MudTh Class="table-header">Compra/Venda</MudTh>
+                    <MudTh Class="table-header">Quantidade</MudTh>
+                    <MudTh Class="table-header">Preço (R$)</MudTh>
+                    <MudTh Class="table-header">Outros Custos (R$)</MudTh>
+                    <MudTh Class="table-header">Data</MudTh>
+                    <MudTh></MudTh>
+				</HeaderContent>
+				<RowTemplate>
+                    <!-- Código -->
+                    <MudTd DataLabel="Código">
+                        <MudTextField @bind-Value="newTransaction.Ticker" Required="true" />
+                    </MudTd>
+                   <!-- Tipo -->
+                    <MudTd DataLabel="Tipo">
+                        <MudSelect T="AssetType" @bind-Value="newTransaction.Type" Required="true">
+                            <MudSelectItem Value="@AssetType.Stock">Ação</MudSelectItem>
+                            <MudSelectItem Value="@AssetType.RealEstateFund">FII</MudSelectItem>
+                        </MudSelect>
+                    </MudTd>
+                    <!-- Compra/Venda -->
+                    <MudTd DataLabel="Compra/Venda">
+                        <MudSelect T="bool" @bind-Value="newTransaction.IsBuy" Required="true">
+                            <MudSelectItem Value="true">Compra</MudSelectItem>
+                            <MudSelectItem Value="false">Venda</MudSelectItem>
+                        </MudSelect>
+                    </MudTd>
+                     <!-- Quantidade -->
+                    <MudTd DataLabel="Quantidade">
+                        <MudNumericField T="int" @bind-Value="newTransaction.Quantity" Required="true" Min="1" />
+                    </MudTd>
+                    <!-- Preço (R$) -->
+                    <MudTd DataLabel="Preço (R$)">
+                        <MudNumericField T="decimal" @bind-Value="newTransaction.PricePerShare" Required="true" Min="0.01m" />
+                    </MudTd>
+                    <!-- Outros Custos (R$) -->
+                    <MudTd DataLabel="Outros Custos (R$)">
+                        <MudNumericField T="decimal" @bind-Value="newTransaction.OtherCosts" Min="0.0m" />
+                    </MudTd>
+                    <!-- Data -->
+
+                    <MudTd DataLabel="Data">
+                        <MudTextField @bind-Value="newTransactionDate"
+                                       Required="true"
+                                       Mask="@dateMask"
+                                       Placeholder="dd/MM/yyyy" />
+                    </MudTd>
+                    <!-- Botão Adicionar -->
+                    <MudTd>
+                        <MudTooltip Text="Salvar nova transação.">
+                        <MudButton Variant="Variant.Filled"
+                                   Style="background-color: #1976D2; color: white;"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   OnClick="@(async () => await AddTransactionAsync())">
+                        </MudButton>
+                        </MudTooltip>
+                    </MudTd>
+				</RowTemplate>
+			</MudTable>
+		</MudCardContent>
+    </MudForm>
+</MudPaper>
+</MudCollapse>
+<MudPaper>
+<MudTable Items="@filteredTransactions" 
+          Loading="@isLoading" Dense="false" 
+          Hover="true" 
+          ReadOnly="false" 
+          CanCancelEdit="true" 
+          Filter="new Func<Transaction,bool>(FilterFunc)" 
+          @bind-SelectedItem="selectedItem1" 
+          SortLabel="Sort By" 
+          CommitEditTooltip="Commit Edit" 
+          OnCommitEditClick="@(() => Snackbar.Add(" Commit Edit Handler Invoked"))" 
+          RowEditPreview="BackupItem" 
+          RowEditCancel="ResetItemToOriginalValues" 
+          RowEditCommit="ItemHasBeenCommitted" 
+          IsEditRowSwitchingBlocked="true" 
+          ApplyButtonPosition="TableApplyButtonPosition.End" 
+          EditButtonPosition="TableEditButtonPosition.End"
+          EditTrigger="TableEditTrigger.EditButton" 
+          Striped="true"
+          Style="background-color: #F5F5F5;">
+<ToolBarContent >
+    <!-- Espaçamento entre botões e tabela -->
+    
+
+    <!-- Filtro e Pesquisa -->
+    <MudSelect T="string" @bind-Value="selectedTransactionType" Variant="Variant.Text" class="filtro-e-pesquisa">
+        <MudSelectItem Value="@All">Todos</MudSelectItem>
+        <MudSelectItem Value="@Purchase">Compras</MudSelectItem>
+        <MudSelectItem Value="@Sale">Vendas</MudSelectItem>
+    </MudSelect>
+    <MudTextField @bind-Value="searchString" Placeholder="Pesquisar (Código ou Data)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+<MudSpacer />
+<MudSpacer />
+<MudSpacer />
+<MudSpacer />
+<MudSpacer />
+<MudSpacer />
+</ToolBarContent>
+
+<HeaderContent>
+    <MudTh>
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Ticker)">
+            <span class="table-header">Código</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh class="teste">
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Type)">
+            <span class="table-header">Tipo</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh>
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.IsBuy)">
+            <span class="table-header">Compra/Venda</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh>
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Quantity)">
+            <span class="table-header">Quantidade</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh>
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.PricePerShare)">
+            <span class="table-header">Preço (R$)</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh>
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalValue)">
+            <span class="table-header">Valor Total (R$)</span>
+        </MudTableSortLabel>
+    </MudTh>
+    <MudTh>
+        <MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.TransactionDate)">
+            <span class="table-header">Data</span>
+        </MudTableSortLabel>
+    </MudTh>
+</HeaderContent>
+<RowTemplate>
+    <MudTd DataLabel="Código">@context.Ticker</MudTd>
+    <MudTd DataLabel="Tipo do Ativo">@GetAssetTypeDescription(context.Type)</MudTd>
+    <MudTd DataLabel="Tipo">
+        @if (context.IsBuy)
+        {
+            <MudChip T="string" Style="background-color:#64af67; color: white;" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward">
+                Compra
+            </MudChip>
+        }
+        else
+        {
+            <MudChip T="string" Style="background-color: #E57373; color:white" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward">
+                Venda
+            </MudChip>
+        }
+    </MudTd>
+    <MudTd DataLabel="Quantidade">@context.Quantity</MudTd>
+    <MudTd DataLabel="Preço R$">@context.PricePerShare</MudTd>
+    <MudTd DataLabel="Valor Total">@context.TotalValue.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudTd>
+    <MudTd DataLabel="Data">@context.TransactionDate.ToString("dd/MM/yyyy")</MudTd>
+</RowTemplate>
+  <RowEditingTemplate>
+    <MudTd DataLabel="Código">
+      <MudTextField @bind-Value="context.Ticker" Required />
+    </MudTd>
+        <MudTd DataLabel="Tipo">
+        <MudSelect T="AssetType" @bind-Value="context.Type" Required="true">
+            <MudSelectItem Value="@AssetType.Stock">Ação</MudSelectItem>
+            <MudSelectItem Value="@AssetType.RealEstateFund">FII</MudSelectItem>
+        </MudSelect>
+    </MudTd>
+    <MudTd DataLabel="Compra/Venda">
+        <MudSelect T="bool" @bind-Value="context.IsBuy" Required="true">
+            <MudSelectItem Value="true">Compra</MudSelectItem>
+            <MudSelectItem Value="false">Venda</MudSelectItem>
+        </MudSelect>
+    </MudTd>
+    <MudTd DataLabel="Quantidade">
+        <MudNumericField T="int" @bind-Value="context.Quantity" Required="true" Min="1" />
+    </MudTd>
+    <MudTd DataLabel="Preço (R$)">
+        <MudNumericField T="decimal" @bind-Value="newTransaction.PricePerShare" Required="true" Min="0.01m" />
+    </MudTd>
+    <MudTd DataLabel="Outros Custos (R$)">
+        <MudNumericField T="decimal" @bind-Value="newTransaction.OtherCosts" Min="0.0m" />
+    </MudTd>
+    <MudTd DataLabel="Data">
+        <MudTextField @bind-Value="newTransactionDate"
+                        Required="true"
+                        Mask="@dateMask"
+                        Placeholder="dd/MM/yyyy" />
+    </MudTd>
+  </RowEditingTemplate>
+  <PagerContent>
+    <MudTablePager />
+  </PagerContent>
+  <EditButtonContent Context="button">
+    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Edit" Class="pa-0" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
+    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Delete" Class="pa-0" @onclick="_ => DeleteTransaction(button.Item)" Disabled="@button.ButtonDisabled" />
+  </EditButtonContent>
+</MudTable>
+</MudPaper>
+
+
+
+@*
 <MudText HtmlTag="span">Selected1: @selectedItem1?.Ticker</MudText>
 <MudExpansionPanels Style="flex: 1;">
-    <MudExpansionPanel Text="Show inline-edit event log">
-        @foreach (var message in editEvents)
-        {
-            <MudText>@message</MudText>
-        }
-        @if (editEvents.Count > 0)
-        {
-            <div class="d-flex">
-                <MudSpacer />
-                <MudButton Class="mt-3" ButtonType="ButtonType.Button" Variant="Variant.Filled" OnClick="ClearEventLog">Clear event log</MudButton>
-            </div>
-        }
-    </MudExpansionPanel>
+  <MudExpansionPanel Text="Show inline-edit event log"> @foreach (var message in editEvents) { <MudText>@message</MudText> } @if (editEvents.Count > 0) { <div class="d-flex">
+      <MudSpacer />
+      <MudButton Class="mt-3" ButtonType="ButtonType.Button" Variant="Variant.Filled" OnClick="ClearEventLog">Clear event log</MudButton>
+    </div> } </MudExpansionPanel>
 </MudExpansionPanels>
+*@
+
+
+<style>
+        .custom-toolbar-bg {
+        background-color: #F5F5F5; /* Substitua pela cor desejada */
+    }
+    .table-header {
+    font-weight: bold;
+    font-size: 14px; /* Ajuste conforme necessário */
+    color: #37474F; /* Tom de cinza escuro para contraste */
+    text-transform: uppercase; /* Transformar em letras maiúsculas */
+}
+
+.mud-table-head {
+    background-color: #F5F5F5; /* Fundo cinza claro para os cabeçalhos */
+    padding: 8px; /* Espaçamento interno */
+    text-align: center; /* Centralizar texto */
+}
+
+   :root {
+        --mud-palette-table-hover: #e7e7e7;  /* #0000000a is default */
+    }
+
+.filtro-e-pesquisa {
+    margin-left: -10px;
+}
+
+/* Rosa mais suave para Importar Excel */
+.botao-excel.secondary {
+    border-color: #43A047;
+    color: #43A047;
+}
+
+.botao-excel.secondary:hover {
+    border-color: #D81B60;
+    color: #D81B60;
+}
+
+.form-horizontal {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.form-field {
+    margin-right: 10px;
+    /* Defina a largura desejada aqui */
+}
+
+.form-button {
+    margin-top: 4px;
+}
+
+</style>
+
 @code {
     private List<string> editEvents = new();
     private string searchString = "";
-    private Transaction selectedItem1 = null;
-    private Transaction elementBeforeEdit;
-    private IEnumerable<Transaction> transactionList = new List<Transaction>();
+    private Transaction? selectedItem1 = null;
+    private Transaction? elementBeforeEdit;
+    private List<Transaction> transactionList = new List<Transaction>();
     private bool isLoading = true;
-
+    private Transaction? _tempDeletedTransaction;
+    private Timer? _undoTimer;
     private const string All = "All";
     private const string Purchase = "Purchase";
     private const string Sale = "Sale";
     private string selectedTransactionType = "All";
-    private IEnumerable<Transaction> filteredTransactions => transactionList.Where(FilterFunc);
+    private List<Transaction> filteredTransactions => transactionList.Where(FilterFunc).ToList();
+    // Nova transação para o formulário
+    private string newTransactionDate = DateTime.Today.ToString("dd/MM/yyyy");
+    IMask dateMask = new DateMask("dd/MM/yyyy");
+    private bool isAddFormVisible = false;
+    private MudForm? quickAddForm;
+    private readonly string SnackBarKey = "SnackBarKey";
+    private string? userId;
+
+    private void ToggleAddForm()
+    {
+        isAddFormVisible = !isAddFormVisible;
+    }
+    private Transaction newTransaction = new Transaction
+    {
+        TransactionDate = DateTime.Today,
+        PricePerShare = 1.00m,
+        OtherCosts = 0.00m,
+        Quantity = 1,
+        Type = AssetType.Stock,
+        IsBuy = true
+    };
+    
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.Delay(1000);
-        string? userId = await GetUserIdAsync();
+        userId = await GetUserIdAsync();
         if (!string.IsNullOrEmpty(userId))
         {
-            transactionList = await _transactionService.GetAllByUserIdAsync(userId);
+            transactionList = (await _transactionService.GetAllByUserIdAsync(userId)).ToList();
         }
         isLoading = false;
     }
@@ -128,7 +356,7 @@
     private void AddEditionEvent(string message)
     {
         editEvents.Add(message);
-        StateHasChanged();
+        ReloadTable();
     }
     private void BackupItem(object element)
     {
@@ -151,25 +379,18 @@
         ((Transaction)element).PricePerShare = elementBeforeEdit.PricePerShare;
         AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Ticker} canceled");
     }
-    private bool FilterFunc(Transaction element)
+    private bool FilterFunc(Transaction transaction)
     {
-                // Filter by search string
-        bool matchesSearch = string.IsNullOrWhiteSpace(searchString) ||
-                             element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+        // Filter by search string
+        bool matchesSearch = transaction.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+                          || transaction.TransactionDate.ToString("dd/MM/yyyy").Contains(searchString);
 
-    // Filtra por tipo de transação
-    bool matchesType = selectedTransactionType == All ||
-                       (selectedTransactionType == Purchase && element.IsBuy) ||
-                       (selectedTransactionType == Sale && !element.IsBuy);
+        // Filtra por tipo de transação
+        bool matchesType = selectedTransactionType == All ||
+                        (selectedTransactionType == Purchase && transaction.IsBuy) ||
+                        (selectedTransactionType == Sale && !transaction.IsBuy);
 
-    return matchesSearch && matchesType;
-
-
-        /*if (string.IsNullOrWhiteSpace(searchString))
-            return true;
-        if (element.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-        return false;*/
+        return matchesSearch && matchesType;
     }
     private async Task<string?> GetUserIdAsync()
     {
@@ -179,5 +400,122 @@
             return authstate.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         }
         return string.Empty;
+    }
+    private string GetAssetTypeDescription(AssetType assetType)
+    {
+        return assetType switch
+        {
+            AssetType.Stock => "Ação",
+            AssetType.RealEstateFund => "FII",
+            _ => "Desconhecido"
+        };
+    }
+
+    private async Task AddTransactionAsync()
+    {
+        if (quickAddForm.IsValid)
+        {
+            // Atribuir um ID único à nova transação
+            newTransaction.Id = Guid.NewGuid();
+            newTransaction.UserId = userId;
+            newTransaction.CreateDate = DateTime.Now;
+            newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
+            await _transactionService.AddAsync(newTransaction);
+
+            transactionList.Add(newTransaction);
+
+            Snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
+
+            newTransaction = new Transaction
+            {
+                TransactionDate = DateTime.Today,
+                PricePerShare = 1.00m,
+                OtherCosts = 0.00m,
+                Quantity = 1,
+                Type = AssetType.Stock,
+                IsBuy = true
+            };
+
+            ReloadTable();
+        }
+    }
+
+    private void ImportFromExcel()
+    {
+        // Lógica para importar dados de um arquivo Excel
+        Console.WriteLine("Abrindo seletor de arquivos para Importar Excel.");
+    }
+
+    private void DeleteTransaction(object? obj)
+    {
+        if (obj is not Transaction transaction)
+        {
+            Snackbar.Add("Invalid transaction.", Severity.Error);
+            return;
+        }
+
+        var index = transactionList.FindIndex(t => t.Id == transaction.Id);
+
+        if (index < 0)
+        {
+            Snackbar.Add("Transaction not found.", Severity.Warning);
+            return;
+        }
+
+        _tempDeletedTransaction = transactionList[index];
+        transactionList.RemoveAt(index);
+
+        ReloadTable();
+
+        Snackbar.Add("Transação excluída.", Severity.Error, options =>
+        {
+            options.Action = "Desfazer";
+            options.RequireInteraction = false;
+            options.VisibleStateDuration = 5000; // 5 seconds
+
+            options.Onclick = snackbar =>
+            {
+                UndoDeleteTransaction();
+                Snackbar.RemoveByKey(SnackBarKey);
+                return Task.CompletedTask;
+            };
+        }, SnackBarKey);
+
+        // Initialize the timer to confirm deletion after 5 seconds
+        _undoTimer?.Dispose(); // Dispose any existing timer
+        _undoTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                ConfirmDeleteTransaction(transaction.Id);
+                _undoTimer?.Dispose(); // Dispose the timer after execution
+            });
+        }, null, 5000, Timeout.Infinite);
+    }
+
+    private void UndoDeleteTransaction()
+    {
+        if (_tempDeletedTransaction != null)
+        {
+            transactionList.Add(_tempDeletedTransaction);
+            _tempDeletedTransaction = null;
+
+            ReloadTable();
+        }
+
+        _undoTimer?.Dispose();
+    }
+
+    private void ConfirmDeleteTransaction(Guid id)
+    {
+        _transactionService.RemoveAsync(id);
+        Snackbar.RemoveByKey(SnackBarKey);
+        _tempDeletedTransaction = null;
+        _undoTimer?.Dispose();
+    }
+
+    private void ReloadTable()
+    {
+        StateHasChanged();
     }
 }

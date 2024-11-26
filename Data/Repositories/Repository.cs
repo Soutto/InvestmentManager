@@ -20,7 +20,7 @@ namespace PortofolioManager.Infrastructure.Repositories
             return await _dbSet.FindAsync(id);
         }
 
-        public async Task<IEnumerable<TEntity>> GetAllAsync()
+        public async Task<List<TEntity>> GetAllAsync()
         {
             return await _dbSet.AsNoTracking().ToListAsync();
         }
@@ -43,6 +43,11 @@ namespace PortofolioManager.Infrastructure.Repositories
         public IQueryable<TEntity> Query()
         {
             return _dbSet.AsQueryable();
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 

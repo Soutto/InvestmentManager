@@ -5,40 +5,115 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InvestmentManager.Services
 {
-    public class TransactionService : ITransactionService
+    /// <summary>
+    /// Provides services for managing transactions.
+    /// </summary>
+    public class TransactionService(IRepository<Transaction> transactionRepository, ILogger<TransactionService> logger) : ITransactionService
     {
-        private readonly IRepository<Transaction> _transactionRepository;
+        private readonly IRepository<Transaction> _transactionRepository = transactionRepository;
+        private readonly ILogger<TransactionService> _logger = logger;
 
-        //private readonly ILogger _logger;
-
-        public TransactionService(IRepository<Transaction> repository)
+        public async Task AddAsync(Transaction transaction)
         {
-             _transactionRepository = repository;
+            if (transaction == null)
+            {
+                _logger.LogError("Attempted to add a null transaction.");
+                throw new ArgumentNullException(nameof(transaction), "Transaction cannot be null.");
+            }
+
+            try
+            {
+                await _transactionRepository.AddAsync(transaction);
+                await _transactionRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding transaction. ID: {TransactionId}", transaction.Id);
+                throw;
+            }
         }
 
-        public Task AddAsync(Transaction transaction)
+        public async Task<List<Transaction>> GetAllByUserIdAsync(string? userId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("User ID is null or empty. Returning empty transaction list.");
+                return [];
+            }
+
+            try
+            {
+                var transactions = await _transactionRepository
+                    .Query()
+                    .Where(t => t.UserId == userId)
+                    .ToListAsync();
+
+                return transactions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving transactions for User ID: {UserId}", userId);
+                throw;
+            }
         }
 
-        public async Task<IEnumerable<Transaction>> GetAllByUserIdAsync(string? userId)
+        public async Task RemoveAsync(Guid id)
         {
-            return await _transactionRepository.Query().Where(transaction => transaction.UserId == userId).ToListAsync();
+            if (id == Guid.Empty)
+            {
+                _logger.LogError("Attempted to remove a transaction with an empty GUID.");
+                throw new ArgumentException("Transaction ID cannot be empty.", nameof(id));
+            }
+
+            try
+            {
+                var transaction = await _transactionRepository.GetByIdAsync(id);
+                
+                if (transaction == null)
+                {
+                    _logger.LogWarning("Transaction not found. ID: {TransactionId}", id);
+                    throw new KeyNotFoundException($"Transaction with ID {id} not found.");
+                }
+
+                _transactionRepository.Remove(transaction);
+                
+                await _transactionRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing transaction. ID: {TransactionId}", id);
+                throw;
+            }
         }
 
-        public async Task<Transaction?> GetByIdAsync(Guid id) 
-        {
-            return await _transactionRepository.GetByIdAsync(id);
-        }
 
-        public void Remove(Transaction transaction)
+        public async Task UpdateAsync(Transaction updatedTransaction)
         {
-            throw new NotImplementedException();
-        }
+            if (updatedTransaction == null)
+            {
+                _logger.LogError("Attempted to update a null transaction.");
+                throw new ArgumentNullException(nameof(updatedTransaction), "Transaction cannot be null.");
+            }
 
-        public void Update(Transaction transaction)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                var existingTransaction = await _transactionRepository.GetByIdAsync(updatedTransaction.Id);
+
+                if (existingTransaction == null)
+                {
+                    _logger.LogWarning("Transaction not found. ID: {TransactionId}", updatedTransaction.Id);
+                    throw new KeyNotFoundException($"Transaction with ID {updatedTransaction.Id} not found.");
+                }
+
+                existingTransaction.UpdateProperties(updatedTransaction);
+
+                await _transactionRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating transaction. ID: {TransactionId}", updatedTransaction.Id);
+                throw;
+            }
         }
     }
 }

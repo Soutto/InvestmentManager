@@ -96,5 +96,20 @@ namespace InvestmentManager.Models
 
         [ForeignKey("UserId")]
         public ApplicationUser? User { get; set; }
+
+        /// <summary>
+        /// Updates the properties of this transaction with the values provided by another transaction.
+        /// </summary>
+        /// <param name="updatedTransaction">The transaction containing the updated values.</param>
+        public void UpdateProperties(Transaction updatedTransaction)
+        {
+            Ticker = updatedTransaction.Ticker;
+            Type = updatedTransaction.Type;
+            IsBuy = updatedTransaction.IsBuy;
+            Quantity = updatedTransaction.Quantity;
+            PricePerShare = updatedTransaction.PricePerShare;
+            OtherCosts = updatedTransaction.OtherCosts;
+            TransactionDate = updatedTransaction.TransactionDate;
+        }
     }
 }
