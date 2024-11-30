@@ -7,5 +7,6 @@ namespace InvestmentManager.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public DbSet<Transaction> Transactions { get; set; }
+    public required DbSet<Transaction> Transactions { get; set; }
+    public required DbSet<Transaction> Assets { get; set; }
 }

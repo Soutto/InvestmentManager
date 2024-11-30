@@ -6,7 +6,6 @@ namespace InvestmentManager.Services.Interfaces
     {
         Task<List<Transaction>> GetAllByUserIdAsync(string? userId);
         Task AddAsync(Transaction transaction);
-        Task UpdateAsync(Transaction transaction);
         Task RemoveAsync(Guid id);
     }
 }

@@ -46,6 +46,7 @@ namespace InvestmentManager.Services
                 var transactions = await _transactionRepository
                     .Query()
                     .Where(t => t.UserId == userId)
+                    .Include(t => t.Asset)
                     .ToListAsync();
 
                 return transactions;
@@ -82,36 +83,6 @@ namespace InvestmentManager.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing transaction. ID: {TransactionId}", id);
-                throw;
-            }
-        }
-
-
-        public async Task UpdateAsync(Transaction updatedTransaction)
-        {
-            if (updatedTransaction == null)
-            {
-                _logger.LogError("Attempted to update a null transaction.");
-                throw new ArgumentNullException(nameof(updatedTransaction), "Transaction cannot be null.");
-            }
-
-            try
-            {
-                var existingTransaction = await _transactionRepository.GetByIdAsync(updatedTransaction.Id);
-
-                if (existingTransaction == null)
-                {
-                    _logger.LogWarning("Transaction not found. ID: {TransactionId}", updatedTransaction.Id);
-                    throw new KeyNotFoundException($"Transaction with ID {updatedTransaction.Id} not found.");
-                }
-
-                existingTransaction.UpdateProperties(updatedTransaction);
-
-                await _transactionRepository.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating transaction. ID: {TransactionId}", updatedTransaction.Id);
                 throw;
             }
         }

@@ -4,10 +4,13 @@
 @using InvestmentManager.Services.Interfaces
 @using MudBlazor
 @using Microsoft.AspNetCore.Authorization
+@using System.Reflection
+@using System.ComponentModel.DataAnnotations
 @inject HttpClient httpClient
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider GetAuthenticationStateAsync
 @inject ITransactionService _transactionService
+@inject IAssetService _assetService
 @page "/transactions"
 @attribute [Authorize]
 
@@ -45,15 +48,32 @@
 				<RowTemplate>
                     <!-- Código -->
                     <MudTd DataLabel="Código">
-                        <MudTextField @bind-Value="newTransaction.Ticker" Required="true" />
+                        <MudSelect T="string" @bind-Value="newTransaction.Asset.Ticker" 
+                        AnchorOrigin="Origin.BottomCenter" 
+                        TransformOrigin="Origin.BottomCenter" 
+                        Variant="Variant.Text" 
+                        AdornmentIcon="@Icons.Material.Filled.Search" 
+                        AdornmentColor="Color.Primary">
+                        @foreach (var asset in assets)
+                        {
+                            <MudSelectItem Value="@asset.Ticker">@asset.Ticker</MudSelectItem>
+                        }
+                        </MudSelect>
                     </MudTd>
                    <!-- Tipo -->
                     <MudTd DataLabel="Tipo">
-                        <MudSelect T="AssetType" @bind-Value="newTransaction.Type" Required="true">
-                            <MudSelectItem Value="@AssetType.Stock">Ação</MudSelectItem>
-                            <MudSelectItem Value="@AssetType.RealEstateFund">FII</MudSelectItem>
+                        <MudSelect T="AssetType" @bind-Value="newTransaction.Asset.Type" Required="true">
+                            @foreach (var variant in Enum.GetValues<AssetType>())
+                            {
+                                var displayName = variant.GetType()
+                                                        .GetField(variant.ToString())
+                                                        ?.GetCustomAttribute<DisplayAttribute>()
+                                                        ?.Name ?? variant.ToString();
+                                <MudSelectItem Value="@variant">@displayName</MudSelectItem>
+                            }
                         </MudSelect>
                     </MudTd>
+
                     <!-- Compra/Venda -->
                     <MudTd DataLabel="Compra/Venda">
                         <MudSelect T="bool" @bind-Value="newTransaction.IsBuy" Required="true">
@@ -67,7 +87,7 @@
                     </MudTd>
                     <!-- Preço (R$) -->
                     <MudTd DataLabel="Preço (R$)">
-                        <MudNumericField T="decimal" @bind-Value="newTransaction.PricePerShare" Required="true" Min="0.01m" />
+                        <MudNumericField T="decimal" @bind-Value="newTransaction.UnitPrice" Required="true" Min="0.01m" />
                     </MudTd>
                     <!-- Outros Custos (R$) -->
                     <MudTd DataLabel="Outros Custos (R$)">
@@ -138,12 +158,12 @@
 
 <HeaderContent>
     <MudTh>
-        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Ticker)">
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Asset.Ticker)">
             <span class="table-header">Código</span>
         </MudTableSortLabel>
     </MudTh>
     <MudTh class="teste">
-        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Type)">
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Asset.Type)">
             <span class="table-header">Tipo</span>
         </MudTableSortLabel>
     </MudTh>
@@ -158,7 +178,7 @@
         </MudTableSortLabel>
     </MudTh>
     <MudTh>
-        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.PricePerShare)">
+        <MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.UnitPrice)">
             <span class="table-header">Preço (R$)</span>
         </MudTableSortLabel>
     </MudTh>
@@ -174,8 +194,8 @@
     </MudTh>
 </HeaderContent>
 <RowTemplate>
-    <MudTd DataLabel="Código">@context.Ticker</MudTd>
-    <MudTd DataLabel="Tipo do Ativo">@GetAssetTypeDescription(context.Type)</MudTd>
+    <MudTd DataLabel="Código">@context.Asset.Ticker</MudTd>
+    <MudTd DataLabel="Tipo do Ativo">@GetAssetTypeDescription(context.Asset.Type)</MudTd>
     <MudTd DataLabel="Tipo">
         @if (context.IsBuy)
         {
@@ -191,63 +211,18 @@
         }
     </MudTd>
     <MudTd DataLabel="Quantidade">@context.Quantity</MudTd>
-    <MudTd DataLabel="Preço R$">@context.PricePerShare</MudTd>
+    <MudTd DataLabel="Preço R$">@context.UnitPrice</MudTd>
     <MudTd DataLabel="Valor Total">@context.TotalValue.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudTd>
     <MudTd DataLabel="Data">@context.TransactionDate.ToString("dd/MM/yyyy")</MudTd>
 </RowTemplate>
-  <RowEditingTemplate>
-    <MudTd DataLabel="Código">
-      <MudTextField @bind-Value="context.Ticker" Required />
-    </MudTd>
-        <MudTd DataLabel="Tipo">
-        <MudSelect T="AssetType" @bind-Value="context.Type" Required="true">
-            <MudSelectItem Value="@AssetType.Stock">Ação</MudSelectItem>
-            <MudSelectItem Value="@AssetType.RealEstateFund">FII</MudSelectItem>
-        </MudSelect>
-    </MudTd>
-    <MudTd DataLabel="Compra/Venda">
-        <MudSelect T="bool" @bind-Value="context.IsBuy" Required="true">
-            <MudSelectItem Value="true">Compra</MudSelectItem>
-            <MudSelectItem Value="false">Venda</MudSelectItem>
-        </MudSelect>
-    </MudTd>
-    <MudTd DataLabel="Quantidade">
-        <MudNumericField T="int" @bind-Value="context.Quantity" Required="true" Min="1" />
-    </MudTd>
-    <MudTd DataLabel="Preço (R$)">
-        <MudNumericField T="decimal" @bind-Value="newTransaction.PricePerShare" Required="true" Min="0.01m" />
-    </MudTd>
-    <MudTd DataLabel="Outros Custos (R$)">
-        <MudNumericField T="decimal" @bind-Value="newTransaction.OtherCosts" Min="0.0m" />
-    </MudTd>
-    <MudTd DataLabel="Data">
-        <MudTextField @bind-Value="newTransactionDate"
-                        Required="true"
-                        Mask="@dateMask"
-                        Placeholder="dd/MM/yyyy" />
-    </MudTd>
-  </RowEditingTemplate>
   <PagerContent>
     <MudTablePager />
   </PagerContent>
   <EditButtonContent Context="button">
-    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Edit" Class="pa-1" OnClick="@button.ButtonAction" Disabled="@button.ButtonDisabled" />
-    <MudIconButton Size="@Size.Small"  Icon="@Icons.Material.Filled.Delete" Class="pa-1" @onclick="_ => DeleteTransaction(button.Item)" Disabled="@button.ButtonDisabled" />
+    <MudIconButton Size="@Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Delete" Class="pa-1" @onclick="_ => DeleteTransaction(button.Item)" Disabled="@button.ButtonDisabled" />
   </EditButtonContent>
 </MudTable>
 </MudPaper>
-
-
-
-@*
-<MudText HtmlTag="span">Selected1: @selectedItem1?.Ticker</MudText>
-<MudExpansionPanels Style="flex: 1;">
-  <MudExpansionPanel Text="Show inline-edit event log"> @foreach (var message in editEvents) { <MudText>@message</MudText> } @if (editEvents.Count > 0) { <div class="d-flex">
-      <MudSpacer />
-      <MudButton Class="mt-3" ButtonType="ButtonType.Button" Variant="Variant.Filled" OnClick="ClearEventLog">Clear event log</MudButton>
-    </div> } </MudExpansionPanel>
-</MudExpansionPanels>
-*@
 
 
 <style>
@@ -334,6 +309,19 @@
     private MudForm? quickAddForm;
     private readonly string SnackBarKey = "SnackBarKey";
     private string? userId;
+    private List<Asset> assets = new List<Asset>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = await GetUserIdAsync();
+        if (!string.IsNullOrEmpty(userId))
+        {
+            assets = await _assetService.GetAllAsync();
+            newTransaction.Asset = assets.First();
+            transactionList = await _transactionService.GetAllByUserIdAsync(userId);
+        }
+        isLoading = false;
+    }
 
     private void ToggleAddForm()
     {
@@ -342,23 +330,13 @@
     private Transaction newTransaction = new Transaction
     {
         TransactionDate = DateTime.Today,
-        PricePerShare = 1.00m,
+        UnitPrice = 1.00m,
         OtherCosts = 0.00m,
         Quantity = 1,
-        Type = AssetType.Stock,
+        Asset = new Asset(),
         IsBuy = true
     };
     
-
-    protected override async Task OnInitializedAsync()
-    {
-        userId = await GetUserIdAsync();
-        if (!string.IsNullOrEmpty(userId))
-        {
-            transactionList = (await _transactionService.GetAllByUserIdAsync(userId)).ToList();
-        }
-        isLoading = false;
-    }
     private void ClearEventLog()
     {
         editEvents.Clear();
@@ -373,26 +351,29 @@
         elementBeforeEdit = new()
             {
                 TransactionDate = ((Transaction)element).TransactionDate,
-                Ticker = ((Transaction)element).Ticker,
-                PricePerShare = ((Transaction)element).PricePerShare,
+                Asset = new Asset
+                {
+                    Ticker = ((Transaction)element).Asset.Ticker
+                },
+                UnitPrice = ((Transaction)element).UnitPrice,
             };
-        AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Ticker}");
+        AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Asset.Ticker}");
     }
     private void ItemHasBeenCommitted(object element)
     {
-        AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Ticker} committed");
+        AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Asset.Ticker} committed");
     }
     private void ResetItemToOriginalValues(object element)
     {
         ((Transaction)element).TransactionDate = elementBeforeEdit.TransactionDate;
-        ((Transaction)element).Ticker = elementBeforeEdit.Ticker;
-        ((Transaction)element).PricePerShare = elementBeforeEdit.PricePerShare;
-        AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Ticker} canceled");
+        ((Transaction)element).Asset.Ticker = elementBeforeEdit.Asset.Ticker;
+        ((Transaction)element).UnitPrice = elementBeforeEdit.UnitPrice;
+        AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Asset.Ticker} canceled");
     }
     private bool FilterFunc(Transaction transaction)
     {
         // Filter by search string
-        bool matchesSearch = transaction.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+        bool matchesSearch = transaction.Asset.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase)
                           || transaction.TransactionDate.ToString("dd/MM/yyyy").Contains(searchString);
 
         // Filtra por tipo de transação
@@ -439,10 +420,13 @@
             newTransaction = new Transaction
             {
                 TransactionDate = DateTime.Today,
-                PricePerShare = 1.00m,
+                UnitPrice = 1.00m,
                 OtherCosts = 0.00m,
                 Quantity = 1,
-                Type = AssetType.Stock,
+                Asset = new Asset
+                {
+                    Type = AssetType.Stock
+                },
                 IsBuy = true
             };
 
@@ -523,7 +507,14 @@
         _tempDeletedTransaction = null;
         _undoTimer?.Dispose();
     }
-
+    private void OnTickerChanged(string ticker)
+    {
+        var selectedAsset = assets.FirstOrDefault(a => a.Ticker.Equals(ticker, StringComparison.OrdinalIgnoreCase));
+        if (selectedAsset != null)
+        {
+            newTransaction.Asset.Type = selectedAsset.Type;
+        }
+    }
     private void ReloadTable()
     {
         StateHasChanged();

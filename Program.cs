@@ -48,12 +48,16 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
+
 #region Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 #endregion
+
 #region Services
 //builder.Services.AddScoped<BrapiIntegrationService, BrapiIntegrationService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IAssetService, AssetService>();
 #endregion
 
 var app = builder.Build();

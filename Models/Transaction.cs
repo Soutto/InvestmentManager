@@ -8,53 +8,46 @@ namespace InvestmentManager.Models
     public class Transaction
     {
         /// <summary>
-        /// Unique identifier for the transaction.
+        /// Unique identifier for this transaction.
         /// </summary>
         [Key]
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the unique identifier of the user who owns this transaction.
+        /// Unique identifier of the user who owns this transaction.
         /// </summary>
         [Required]
         public string? UserId { get; set; } = string.Empty;
 
         /// <summary>
-        /// Type of transaction: Buy or Sell.
+        /// Indicates whether this transaction is a Buy (true) or Sell (false).
         /// </summary>
         [Required]
         public bool IsBuy { get; set; }
 
         /// <summary>
-        /// Date and time when the transaction was executed.
+        /// The date and time when the transaction was executed.
         /// </summary>
         [Required]
         public DateTime TransactionDate { get; set; }
 
         /// <summary>
-        /// Ticker symbol of the security being transactioned.
+        /// The number of units (shares, tokens, etc.) involved in the transaction.
         /// </summary>
         [Required]
-        [MaxLength(14)]
-        public string Ticker { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Number of shares involved in the transaction.
-        /// </summary>
-        [Required]
-        [Range  (1, 10000000)]
+        [Range(1, 10000000)]
         public int Quantity { get; set; }
 
         /// <summary>
-        /// Price per share of the security.
+        /// The price per unit of the asset at the time of the transaction.
         /// </summary>
         [Required]
-        [Range (0.01, 10000.00)]
+        [Range(0.01, 10000.00)]
         [Column(TypeName = "decimal(18, 2)")]
-        public decimal PricePerShare { get; set; }
+        public decimal UnitPrice { get; set; }
 
         /// <summary>
-        /// Other transaction costs.
+        /// Additional costs associated with this transaction (e.g., fees, taxes).
         /// </summary>
         [Required]
         [Range(0.00, 100000000.00)]
@@ -62,54 +55,43 @@ namespace InvestmentManager.Models
         public decimal OtherCosts { get; set; }
 
         /// <summary>
-        /// Total value of the transaction 
-        /// Buys -> (Quantity * PricePerShare) + OtherCosts).
-        /// Sells -> (Quantity * PricePerShare) - OtherCosts).
+        /// The total value of the transaction:
+        /// - For Buy transactions: (Quantity * UnitPrice) + OtherCosts.
+        /// - For Sell transactions: (Quantity * UnitPrice) - OtherCosts.
+        /// This value is computed dynamically and not stored in the database.
         /// </summary>
         [NotMapped]
         public decimal TotalValue 
         {     
             get
             {
-                return IsBuy ? (Quantity * PricePerShare) + OtherCosts
-                             : (Quantity * PricePerShare) - OtherCosts;
+                return IsBuy ? (Quantity * UnitPrice) + OtherCosts
+                             : (Quantity * UnitPrice) - OtherCosts;
             } 
         }
 
         /// <summary>
-        /// Date and time when the transaction was created
+        /// The date and time when this transaction record was created.
         /// </summary>
         [Required]
         public DateTime CreateDate { get; set; }
 
         /// <summary>
-        /// Optional: Notes or comments about the transaction.
-        /// </summary>
-        [MaxLength (500)]
-        public string? Notes { get; set; }
-
-        /// <summary>
-        /// Type of the asset being transacted (e.g., Stock, Cryptocurrency).
+        /// The ISIN code of the asset involved in the transaction.
         /// </summary>
         [Required]
-        public AssetType Type { get; set; }
-
-        [ForeignKey("UserId")]
-        public ApplicationUser? User { get; set; }
+        string? AssetIsinCode { get; set; }
 
         /// <summary>
-        /// Updates the properties of this transaction with the values provided by another transaction.
+        /// The asset involved in the transaction, represented as a foreign key relationship.
         /// </summary>
-        /// <param name="updatedTransaction">The transaction containing the updated values.</param>
-        public void UpdateProperties(Transaction updatedTransaction)
-        {
-            Ticker = updatedTransaction.Ticker;
-            Type = updatedTransaction.Type;
-            IsBuy = updatedTransaction.IsBuy;
-            Quantity = updatedTransaction.Quantity;
-            PricePerShare = updatedTransaction.PricePerShare;
-            OtherCosts = updatedTransaction.OtherCosts;
-            TransactionDate = updatedTransaction.TransactionDate;
-        }
+        [ForeignKey("AssetIsinCode")]
+        public Asset? Asset { get; set; }
+
+        /// <summary>
+        /// The user who owns this transaction, represented as a foreign key relationship.
+        /// </summary>
+        [ForeignKey("UserId")]
+        public ApplicationUser? User { get; set; }
     }
 }
