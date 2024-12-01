@@ -36,7 +36,7 @@
 
 			<MudTable Items="new List<Transaction> {newTransaction}" Hover="true" Breakpoint="Breakpoint.None" Dense="true" Elevation="0" Style="background-color: #F5F5F5;">
 				<HeaderContent>
-					<MudTh Class="table-header">Código</MudTh>
+					<MudTh Class="table-header" Style="width: 180px;">Código</MudTh>
 					<MudTh Class="table-header">Tipo</MudTh>
                     <MudTh Class="table-header">Compra/Venda</MudTh>
                     <MudTh Class="table-header">Quantidade</MudTh>
@@ -46,21 +46,19 @@
                     <MudTh></MudTh>
 				</HeaderContent>
 				<RowTemplate>
-                    <!-- Código -->
+                    <!-- Ticker -->
                     <MudTd DataLabel="Código">
-                        <MudSelect T="string" @bind-Value="newTransaction.Asset.Ticker" 
-                        AnchorOrigin="Origin.BottomCenter" 
-                        TransformOrigin="Origin.BottomCenter" 
-                        Variant="Variant.Text" 
-                        AdornmentIcon="@Icons.Material.Filled.Search" 
-                        AdornmentColor="Color.Primary">
-                        @foreach (var asset in assets)
-                        {
-                            <MudSelectItem Value="@asset.Ticker">@asset.Ticker</MudSelectItem>
-                        }
-                        </MudSelect>
+                    <MudSelectExtended ItemCollection="assets2"
+                                    SearchBox="true"
+                                    SearchBoxAutoFocus="true"
+                                    SearchFunc="@(new Func<string, string, bool>(SearchItems))"
+                                    T="string"
+                                    Virtualize="true"
+                                    AnchorOrigin="Origin.BottomCenter"
+                                    Variant="Variant.Text" />
                     </MudTd>
-                   <!-- Tipo -->
+
+                    <!-- Asset Type -->
                     <MudTd DataLabel="Tipo">
                         <MudSelect T="AssetType" @bind-Value="newTransaction.Asset.Type" Required="true">
                             @foreach (var variant in Enum.GetValues<AssetType>())
@@ -310,6 +308,7 @@
     private readonly string SnackBarKey = "SnackBarKey";
     private string? userId;
     private List<Asset> assets = new List<Asset>();
+    private string[] assets2 = new string[2000];
 
     protected override async Task OnInitializedAsync()
     {
@@ -317,6 +316,10 @@
         if (!string.IsNullOrEmpty(userId))
         {
             assets = await _assetService.GetAllAsync();
+            for (var i = 0; i < 2000; i++)
+            {
+                assets2[i] = $"test {i}";
+            }
             newTransaction.Asset = assets.First();
             transactionList = await _transactionService.GetAllByUserIdAsync(userId);
         }
@@ -507,13 +510,33 @@
         _tempDeletedTransaction = null;
         _undoTimer?.Dispose();
     }
-    private void OnTickerChanged(string ticker)
+    void OnTickerChanged(string value)
     {
-        var selectedAsset = assets.FirstOrDefault(a => a.Ticker.Equals(ticker, StringComparison.OrdinalIgnoreCase));
+        newTransaction.Asset.Ticker = value;
+        var duplicates = assets
+    .GroupBy(a => a.Ticker)
+    .Where(g => g.Count() > 1)
+    .Select(g => g.Key)
+    .ToList();
+        var selectedAsset = assets.FirstOrDefault(a => a.Ticker == value);
         if (selectedAsset != null)
         {
             newTransaction.Asset.Type = selectedAsset.Type;
         }
+    }
+    private bool SearchItems(string value, string searchString)
+    {
+        if (searchString == "")
+        {
+            return true;
+        }
+
+        if (value.StartsWith(searchString, StringComparison.CurrentCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
     private void ReloadTable()
     {

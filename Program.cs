@@ -12,6 +12,7 @@ using InvestmentManager.Services.Interfaces;
 using MudBlazor.Translations;
 using MudBlazor;
 using InvestmentManager.Utils;
+using MudExtensions.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMudServices();
 builder.Services.AddMudTranslations();
 builder.Services.AddTransient<MudLocalizer, CustomMudBlazorLocalizer>();
+builder.Services.AddMudExtensions();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
