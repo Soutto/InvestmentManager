@@ -13,7 +13,7 @@ namespace InvestmentManager.Services
         private readonly IRepository<Transaction> _transactionRepository = transactionRepository;
         private readonly ILogger<TransactionService> _logger = logger;
 
-        public async Task AddAsync(Transaction transaction)
+        public void Add(Transaction transaction)
         {
             if (transaction == null)
             {
@@ -23,8 +23,9 @@ namespace InvestmentManager.Services
 
             try
             {
-                await _transactionRepository.AddAsync(transaction);
-                await _transactionRepository.SaveChangesAsync();
+                transaction.Asset = null;
+                _transactionRepository.Add(transaction);
+                _transactionRepository.SaveChanges();
             }
             catch (Exception ex)
             {
@@ -47,6 +48,7 @@ namespace InvestmentManager.Services
                     .Query()
                     .Where(t => t.UserId == userId)
                     .Include(t => t.Asset)
+                    .AsNoTracking()
                     .ToListAsync();
 
                 return transactions;

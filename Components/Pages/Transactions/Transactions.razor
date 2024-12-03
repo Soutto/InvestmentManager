@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.Reflection
 @using System.ComponentModel.DataAnnotations
+@using System.Globalization
 @inject HttpClient httpClient
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider GetAuthenticationStateAsync
@@ -40,8 +41,8 @@
 					<MudTh Class="table-header">Tipo</MudTh>
                     <MudTh Class="table-header">Compra/Venda</MudTh>
                     <MudTh Class="table-header">Quantidade</MudTh>
-                    <MudTh Class="table-header">Preço (R$)</MudTh>
-                    <MudTh Class="table-header">Outros Custos (R$)</MudTh>
+                    <MudTh Class="table-header">Preço</MudTh>
+                    <MudTh Class="table-header">Outros Custos</MudTh>
                     <MudTh Class="table-header">Data</MudTh>
                     <MudTh></MudTh>
 				</HeaderContent>
@@ -52,6 +53,7 @@
                                     SearchBox="true"
                                     SearchBoxAutoFocus="true"
                                     SearchFunc="@(new Func<string, string, bool>(SearchItems))"
+                                    ValueChanged="OnTickerValueChanged"
                                     T="string"
                                     Virtualize="true"
                                     AnchorOrigin="Origin.BottomCenter"
@@ -60,14 +62,10 @@
 
                     <!-- Asset Type -->
                     <MudTd DataLabel="Tipo">
-                        <MudSelect T="AssetType" @bind-Value="newTransaction.Asset.Type" Required="true">
+                        <MudSelect T="AssetType" @bind-Value="newTransaction.Asset.Type" Required="true" Disabled="true" >
                             @foreach (var variant in Enum.GetValues<AssetType>())
                             {
-                                var displayName = variant.GetType()
-                                                        .GetField(variant.ToString())
-                                                        ?.GetCustomAttribute<DisplayAttribute>()
-                                                        ?.Name ?? variant.ToString();
-                                <MudSelectItem Value="@variant">@displayName</MudSelectItem>
+                                <MudSelectItem Value="@variant">@GetAssetTypeDescription(variant)</MudSelectItem>
                             }
                         </MudSelect>
                     </MudTd>
@@ -81,15 +79,20 @@
                     </MudTd>
                      <!-- Quantidade -->
                     <MudTd DataLabel="Quantidade">
-                        <MudNumericField T="int" @bind-Value="newTransaction.Quantity" Required="true" Min="1" />
+                        <MudNumericField T="decimal" @bind-Value="newTransaction.Quantity" Required="true" Min="0.00000001m" />
                     </MudTd>
                     <!-- Preço (R$) -->
-                    <MudTd DataLabel="Preço (R$)">
-                        <MudNumericField T="decimal" @bind-Value="newTransaction.UnitPrice" Required="true" Min="0.01m" />
+                    <MudTd DataLabel="Preço">
+                        <MudNumericField T="decimal" @bind-Value="newTransaction.UnitPrice" Required="true" Min="0.00000001m" 
+                        Culture="@CultureInfo.GetCultureInfo("pt-BR")" Format="C2"/>
                     </MudTd>
                     <!-- Outros Custos (R$) -->
-                    <MudTd DataLabel="Outros Custos (R$)">
-                        <MudNumericField T="decimal" @bind-Value="newTransaction.OtherCosts" Min="0.0m" />
+                    <MudTd DataLabel="Outros Custos">
+                        <MudNumericField T="decimal"
+                        @bind-Value="newTransaction.OtherCosts" 
+                        Min="0.0m" 
+                        Culture="@CultureInfo.GetCultureInfo("pt-BR")"
+                         Format="C2"/>
                     </MudTd>
                     <!-- Data -->
 
@@ -105,7 +108,7 @@
                         <MudButton Variant="Variant.Filled"
                                    Style="background-color: #1976D2; color: white;"
                                    StartIcon="@Icons.Material.Filled.Save"
-                                   OnClick="@(async () => await AddTransactionAsync())">
+                                   OnClick="@( async () => await AddTransactionAsync())">
                         </MudButton>
                         </MudTooltip>
                     </MudTd>
@@ -208,11 +211,12 @@
             </MudChip>
         }
     </MudTd>
-    <MudTd DataLabel="Quantidade">@context.Quantity</MudTd>
+    <MudTd DataLabel="Quantidade">@GetQuantity(context)</MudTd>
     <MudTd DataLabel="Preço R$">@context.UnitPrice</MudTd>
-    <MudTd DataLabel="Valor Total">@context.TotalValue.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudTd>
+    <MudTd DataLabel="Valor Total">@GetTotalValue(context)</MudTd>
     <MudTd DataLabel="Data">@context.TransactionDate.ToString("dd/MM/yyyy")</MudTd>
 </RowTemplate>
+<RowEditingTemplate></RowEditingTemplate>
   <PagerContent>
     <MudTablePager />
   </PagerContent>
@@ -285,261 +289,3 @@
 }
 
 </style>
-
-@code {
-    private List<string> editEvents = new();
-    private string searchString = "";
-    private Transaction? selectedItem1 = null;
-    private Transaction? elementBeforeEdit;
-    private List<Transaction> transactionList = new List<Transaction>();
-    private bool isLoading = true;
-    private Transaction? _tempDeletedTransaction;
-    private Timer? _undoTimer;
-    private const string All = "All";
-    private const string Purchase = "Purchase";
-    private const string Sale = "Sale";
-    private string selectedTransactionType = "All";
-    private List<Transaction> filteredTransactions => transactionList.Where(FilterFunc).ToList();
-    // Nova transação para o formulário
-    private string newTransactionDate = DateTime.Today.ToString("dd/MM/yyyy");
-    IMask dateMask = new DateMask("dd/MM/yyyy");
-    private bool isAddFormVisible = false;
-    private MudForm? quickAddForm;
-    private readonly string SnackBarKey = "SnackBarKey";
-    private string? userId;
-    private List<Asset> assets = new List<Asset>();
-    private string[] assets2 = new string[2000];
-
-    protected override async Task OnInitializedAsync()
-    {
-        userId = await GetUserIdAsync();
-        if (!string.IsNullOrEmpty(userId))
-        {
-            assets = await _assetService.GetAllAsync();
-            for (var i = 0; i < 2000; i++)
-            {
-                assets2[i] = $"test {i}";
-            }
-            newTransaction.Asset = assets.First();
-            transactionList = await _transactionService.GetAllByUserIdAsync(userId);
-        }
-        isLoading = false;
-    }
-
-    private void ToggleAddForm()
-    {
-        isAddFormVisible = !isAddFormVisible;
-    }
-    private Transaction newTransaction = new Transaction
-    {
-        TransactionDate = DateTime.Today,
-        UnitPrice = 1.00m,
-        OtherCosts = 0.00m,
-        Quantity = 1,
-        Asset = new Asset(),
-        IsBuy = true
-    };
-    
-    private void ClearEventLog()
-    {
-        editEvents.Clear();
-    }
-    private void AddEditionEvent(string message)
-    {
-        editEvents.Add(message);
-        ReloadTable();
-    }
-    private void BackupItem(object element)
-    {
-        elementBeforeEdit = new()
-            {
-                TransactionDate = ((Transaction)element).TransactionDate,
-                Asset = new Asset
-                {
-                    Ticker = ((Transaction)element).Asset.Ticker
-                },
-                UnitPrice = ((Transaction)element).UnitPrice,
-            };
-        AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Asset.Ticker}");
-    }
-    private void ItemHasBeenCommitted(object element)
-    {
-        AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Asset.Ticker} committed");
-    }
-    private void ResetItemToOriginalValues(object element)
-    {
-        ((Transaction)element).TransactionDate = elementBeforeEdit.TransactionDate;
-        ((Transaction)element).Asset.Ticker = elementBeforeEdit.Asset.Ticker;
-        ((Transaction)element).UnitPrice = elementBeforeEdit.UnitPrice;
-        AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Asset.Ticker} canceled");
-    }
-    private bool FilterFunc(Transaction transaction)
-    {
-        // Filter by search string
-        bool matchesSearch = transaction.Asset.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase)
-                          || transaction.TransactionDate.ToString("dd/MM/yyyy").Contains(searchString);
-
-        // Filtra por tipo de transação
-        bool matchesType = selectedTransactionType == All ||
-                        (selectedTransactionType == Purchase && transaction.IsBuy) ||
-                        (selectedTransactionType == Sale && !transaction.IsBuy);
-
-        return matchesSearch && matchesType;
-    }
-    private async Task<string?> GetUserIdAsync()
-    {
-        var authstate = await GetAuthenticationStateAsync.GetAuthenticationStateAsync();
-        if (authstate.User.Identity != null && authstate.User.Identity.IsAuthenticated)
-        {
-            return authstate.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        }
-        return string.Empty;
-    }
-    private string GetAssetTypeDescription(AssetType assetType)
-    {
-        return assetType switch
-        {
-            AssetType.Stock => "Ação",
-            AssetType.RealEstateFund => "FII",
-            _ => "Desconhecido"
-        };
-    }
-
-    private async Task AddTransactionAsync()
-    {
-        if (quickAddForm.IsValid)
-        {
-            // Atribuir um ID único à nova transação
-            newTransaction.Id = Guid.NewGuid();
-            newTransaction.UserId = userId;
-            newTransaction.CreateDate = DateTime.Now;
-            newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
-            await _transactionService.AddAsync(newTransaction);
-
-            transactionList.Add(newTransaction);
-
-            Snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
-
-            newTransaction = new Transaction
-            {
-                TransactionDate = DateTime.Today,
-                UnitPrice = 1.00m,
-                OtherCosts = 0.00m,
-                Quantity = 1,
-                Asset = new Asset
-                {
-                    Type = AssetType.Stock
-                },
-                IsBuy = true
-            };
-
-            ReloadTable();
-        }
-    }
-
-    private void ImportFromExcel()
-    {
-        // Lógica para importar dados de um arquivo Excel
-        Console.WriteLine("Abrindo seletor de arquivos para Importar Excel.");
-    }
-
-    private void DeleteTransaction(object? obj)
-    {
-        if (obj is not Transaction transaction)
-        {
-            Snackbar.Add("Invalid transaction.", Severity.Error);
-            return;
-        }
-
-        var index = transactionList.FindIndex(t => t.Id == transaction.Id);
-
-        if (index < 0)
-        {
-            Snackbar.Add("Transaction not found.", Severity.Warning);
-            return;
-        }
-
-        _tempDeletedTransaction = transactionList[index];
-        transactionList.RemoveAt(index);
-
-        ReloadTable();
-
-        Snackbar.Add("Transação excluída.", Severity.Error, options =>
-        {
-            options.Action = "Desfazer";
-            options.RequireInteraction = false;
-            options.VisibleStateDuration = 5000; // 5 seconds
-
-            options.Onclick = snackbar =>
-            {
-                UndoDeleteTransaction();
-                Snackbar.RemoveByKey(SnackBarKey);
-                return Task.CompletedTask;
-            };
-        }, SnackBarKey);
-
-        // Initialize the timer to confirm deletion after 5 seconds
-        _undoTimer?.Dispose(); // Dispose any existing timer
-        _undoTimer = new Timer(async _ =>
-        {
-            await InvokeAsync(() =>
-            {
-                ConfirmDeleteTransaction(transaction.Id);
-                _undoTimer?.Dispose(); // Dispose the timer after execution
-            });
-        }, null, 5000, Timeout.Infinite);
-    }
-
-    private void UndoDeleteTransaction()
-    {
-        if (_tempDeletedTransaction != null)
-        {
-            transactionList.Add(_tempDeletedTransaction);
-            _tempDeletedTransaction = null;
-
-            ReloadTable();
-        }
-
-        _undoTimer?.Dispose();
-    }
-
-    private void ConfirmDeleteTransaction(Guid id)
-    {
-        _transactionService.RemoveAsync(id);
-        Snackbar.RemoveByKey(SnackBarKey);
-        _tempDeletedTransaction = null;
-        _undoTimer?.Dispose();
-    }
-    void OnTickerChanged(string value)
-    {
-        newTransaction.Asset.Ticker = value;
-        var duplicates = assets
-    .GroupBy(a => a.Ticker)
-    .Where(g => g.Count() > 1)
-    .Select(g => g.Key)
-    .ToList();
-        var selectedAsset = assets.FirstOrDefault(a => a.Ticker == value);
-        if (selectedAsset != null)
-        {
-            newTransaction.Asset.Type = selectedAsset.Type;
-        }
-    }
-    private bool SearchItems(string value, string searchString)
-    {
-        if (searchString == "")
-        {
-            return true;
-        }
-
-        if (value.StartsWith(searchString, StringComparison.CurrentCultureIgnoreCase))
-        {
-            return true;
-        }
-
-        return false;
-    }
-    private void ReloadTable()
-    {
-        StateHasChanged();
-    }
-}

@@ -35,14 +35,15 @@ namespace InvestmentManager.Models
         /// The number of units (shares, tokens, etc.) involved in the transaction.
         /// </summary>
         [Required]
-        [Range(1, 10000000)]
-        public int Quantity { get; set; }
+        [Range(0.00000001, 10000000)]
+        [Column(TypeName = "decimal(18, 8)")]
+        public decimal Quantity { get; set; }
 
         /// <summary>
         /// The price per unit of the asset at the time of the transaction.
         /// </summary>
         [Required]
-        [Range(0.01, 10000.00)]
+        [Range(0.01, 100000000.00)]
         [Column(TypeName = "decimal(18, 2)")]
         public decimal UnitPrice { get; set; }
 
@@ -80,7 +81,7 @@ namespace InvestmentManager.Models
         /// The ISIN code of the asset involved in the transaction.
         /// </summary>
         [Required]
-        string? AssetIsinCode { get; set; }
+        public string? AssetIsinCode { get; set; }
 
         /// <summary>
         /// The asset involved in the transaction, represented as a foreign key relationship.

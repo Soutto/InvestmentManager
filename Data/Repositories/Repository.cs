@@ -15,7 +15,7 @@ namespace PortofolioManager.Infrastructure.Repositories
             _dbSet = _context.Set<TEntity>();
         }
 
-        public async Task<TEntity?> GetByIdAsync(Guid id)
+        public async Task<TEntity?> GetByIdAsync<TId>(TId id) where TId : notnull
         {
             return await _dbSet.FindAsync(id);
         }
@@ -27,9 +27,13 @@ namespace PortofolioManager.Infrastructure.Repositories
 
         public async Task AddAsync(TEntity entity)
         {
+            //TODO Remover esse método assincrono
             await _dbSet.AddAsync(entity);
         }
-
+       public void Add(TEntity entity)
+        {
+             _dbSet.Add(entity);
+        }
         public void Update(TEntity entity)
         {
             _dbSet.Update(entity);
@@ -47,7 +51,13 @@ namespace PortofolioManager.Infrastructure.Repositories
 
         public async Task SaveChangesAsync()
         {
+
+            //Reniver esse metodo assincrono.
             await _context.SaveChangesAsync();
+        }
+              public void SaveChanges()
+        {
+            _context.SaveChanges();
         }
     }
 
