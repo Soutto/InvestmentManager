@@ -1,212 +1,155 @@
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 using InvestmentManager.Models;
 using InvestmentManager.Models.Enums;
+using InvestmentManager.Services.Interfaces;
+using InvestmentManager.Utils;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 
 namespace InvestmentManager.Components.Pages.Transactions
 {
     public partial class Transactions : ComponentBase
     {
-        private List<string> editEvents = new();
+        #region Dependencies (Injected Services)
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        [Inject] private IAssetService AssetService { get; set; } = default!;
+        [Inject] private ITransactionService TransactionService { get; set; } = default!;
+        [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+        #endregion
+
+        #region Properties and Fields
+        private List<Transaction> FilteredTransactions => transactions.Where(FilterTransactions).ToList();
         private string searchString = "";
         private Transaction? selectedItem1 = null;
-        private Transaction? elementBeforeEdit;
-        private List<Transaction> transactionList = new List<Transaction>();
+        private List<Transaction> transactions = [];
         private bool isLoading = true;
-        private Transaction? _tempDeletedTransaction;
-        private Timer? _undoTimer;
-        private const string All = "All";
-        private const string Purchase = "Purchase";
-        private const string Sale = "Sale";
+        private Transaction? tempDeletedTransaction;
+        private Timer? undoTimer;
+        private const string TransactionTypeAll = "All";
+        private const string TransactionTypePurchase = "Purchase";
+        private const string TransactionTypeSale = "Sale";
         private string selectedTransactionType = "All";
-        private List<Transaction> filteredTransactions => transactionList.Where(FilterFunc).ToList();
-        // Nova transação para o formulário
         private string newTransactionDate = DateTime.Today.ToString("dd/MM/yyyy");
-        IMask dateMask = new DateMask("dd/MM/yyyy");
+        private readonly IMask dateMask = new DateMask("dd/MM/yyyy");
         private bool isAddFormVisible = false;
         private MudForm? quickAddForm;
         private readonly string SnackBarKey = "SnackBarKey";
-        private string? userId;
-        private List<Asset> assets = new List<Asset>();
-        private List<string> assets2 = new List<string>();
+        private string? UserId;
+        private List<Asset> assets = [];
+        private List<string> assetTickers = [];
+
+        private Transaction newTransaction = InitializeNewTransaction();
+        #endregion
+
+        #region Initialization and Data Loading
+        
+        private async Task LoadAssetsAsync() => assets = await AssetService.GetAllAsync();
+        private async Task LoadTransactionsAsync() => transactions = await TransactionService.GetAllByUserIdAsync(UserId!);
+        private async Task LoadAssetsTickersAsync() => assetTickers = await AssetService.GetAllAssetsTickersAsync();
 
         protected override async Task OnInitializedAsync()
         {
-            userId = await GetUserIdAsync();
-            if (!string.IsNullOrEmpty(userId))
+            UserId = await GetUserIdAsync();
+            if (string.IsNullOrEmpty(UserId))
             {
-                assets = await _assetService.GetAllAsync();
-                assets2 = await _assetService.GetAllTickersTextAsync();
-                transactionList = await _transactionService.GetAllByUserIdAsync(userId);
+                throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
             }
+
+            await LoadDataAsync();
             isLoading = false;
         }
-        private string GetTotalValue(Transaction transaction)
-        {
-            var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
 
-            if (transaction.Asset.Type == AssetType.Cryptocurrency)
+        private async Task LoadDataAsync()
+        {
+            await LoadAssetsAsync();
+            await LoadAssetsTickersAsync();
+            await LoadTransactionsAsync();
+            
+            //TODO Criar uma factory para os dbcontexts para rodar o metodo assincrono.
+            /*var tasks = new Task[]
             {
-                // Check if the number on the left side of the decimal is 0
-                if (Math.Floor(transaction.TotalValue) == 0)
-                {
-                    return transaction.TotalValue.ToString("N8", culture);
-                }
-                else
-                {
-                    return transaction.TotalValue.ToString("N2", culture);
-                }
-            }
-            else
-            {
-                return transaction.TotalValue.ToString("N2", culture);
-            }
+                LoadAssetsAsync(),
+                LoadAssetsTickers(),
+                LoadTransactionsAsync()
+            };
+            await Task.WhenAll(tasks);*/
         }
 
-        private Transaction newTransaction = new Transaction
-        {
-            TransactionDate = DateTime.Today,
-            UnitPrice = 1.00m,
-            OtherCosts = 0.00m,
-            Quantity = 1.00m,
-            Asset = new Asset(),
-            IsBuy = true
-        };
-        private void ToggleAddForm()
-        {
-            isAddFormVisible = !isAddFormVisible;
-        }
-        
-        private void AddEditionEvent(string message)
-        {
-            editEvents.Add(message);
-            ReloadTable();
-        }
-
-        private void BackupItem(object element)
-        {
-            elementBeforeEdit = new()
-                {
-                    TransactionDate = ((Transaction)element).TransactionDate,
-                    Asset = new Asset
-                    {
-                        Ticker = ((Transaction)element).Asset.Ticker
-                    },
-                    UnitPrice = ((Transaction)element).UnitPrice,
-                };
-            AddEditionEvent($"RowEditPreview event: made a backup of Element {((Transaction)element).Asset.Ticker}");
-        }
-        private void ItemHasBeenCommitted(object element)
-        {
-            AddEditionEvent($"RowEditCommit event: Changes to Element {((Transaction)element).Asset.Ticker} committed");
-        }
-        private void ResetItemToOriginalValues(object element)
-        {
-            ((Transaction)element).TransactionDate = elementBeforeEdit.TransactionDate;
-            ((Transaction)element).Asset.Ticker = elementBeforeEdit.Asset.Ticker;
-            ((Transaction)element).UnitPrice = elementBeforeEdit.UnitPrice;
-            AddEditionEvent($"RowEditCancel event: Editing of Element {((Transaction)element).Asset.Ticker} canceled");
-        }
-        
-        private bool FilterFunc(Transaction transaction)
-        {
-            // Filter by search string
-            bool matchesSearch = transaction.Asset.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase)
-                            || transaction.TransactionDate.ToString("dd/MM/yyyy").Contains(searchString);
-
-            // Filtra por tipo de transação
-            bool matchesType = selectedTransactionType == All ||
-                            (selectedTransactionType == Purchase && transaction.IsBuy) ||
-                            (selectedTransactionType == Sale && !transaction.IsBuy);
-
-            return matchesSearch && matchesType;
-        }
         private async Task<string?> GetUserIdAsync()
         {
-            var authstate = await GetAuthenticationStateAsync.GetAuthenticationStateAsync();
-            if (authstate.User.Identity != null && authstate.User.Identity.IsAuthenticated)
-            {
-                return authstate.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            }
-            return string.Empty;
-        }
-        private string GetAssetTypeDescription(AssetType assetType)
-        {
-            var displayAttribute = assetType.GetType()
-                                    .GetField(assetType.ToString())
-                                    ?.GetCustomAttribute<DisplayAttribute>();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-            return displayAttribute?.Name ?? assetType.ToString();
+            return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
         }
+        #endregion
+        
+        #region CRUD Operations
 
         private async Task AddTransactionAsync()
         {
-            if (quickAddForm.IsValid)
-            {
-                // Atribuir um ID único à nova transação
-                newTransaction.Id = Guid.NewGuid();
-                newTransaction.UserId = userId;
-                newTransaction.TransactionDate = DateTime.Today;
-                newTransaction.CreateDate = DateTime.Now;
-                newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
-                newTransaction.Asset = await _assetService.GetByIdAsync(newTransaction.AssetIsinCode);
+            if (quickAddForm == null || !quickAddForm.IsValid) return;
 
-                _transactionService.Add(newTransaction);
-                
-                transactionList.Add(newTransaction);
+            await PopulateTransactionDetailsAsync();
 
-                Snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
+            TransactionService.Add(newTransaction);
 
-                newTransaction = BuildNewTransaction();
+            transactions.Add(newTransaction);
 
-                ReloadTable();
-            }
+            Snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
+
+            newTransaction = InitializeNewTransaction();
+
+            ReloadTable();
         }
-        private Transaction BuildNewTransaction()
+
+        private async Task PopulateTransactionDetailsAsync()
         {
-            return  new Transaction
-            {
-                UnitPrice = 1.00m,
-                OtherCosts = 0.00m,
-                Quantity = 1.00m,
-                Asset = new Asset {Type = AssetType.Stock},
-                IsBuy = true
-            };
+            newTransaction.UserId = UserId;
+            newTransaction.CreateDate = DateTime.Now;
+            newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
+            newTransaction.Asset = await AssetService.GetByIdAsync(newTransaction.AssetIsinCode);
         }
-        private void ImportFromExcel()
-        {
-            // Lógica para importar dados de um arquivo Excel
-            Console.WriteLine("Abrindo seletor de arquivos para Importar Excel.");
-        }
-
+        
         private void DeleteTransaction(object? obj)
         {
-            if (obj is not Transaction transaction)
+            if (obj is null || obj is not Transaction transaction)
             {
                 Snackbar.Add("Invalid transaction.", Severity.Error);
                 return;
             }
 
-            var index = transactionList.FindIndex(t => t.Id == transaction.Id);
-
-            if (index < 0)
+            if (!transactions.Remove(transaction))
             {
                 Snackbar.Add("Transaction not found.", Severity.Warning);
                 return;
             }
 
-            _tempDeletedTransaction = transactionList[index];
-            transactionList.RemoveAt(index);
-
+            tempDeletedTransaction = transaction;
             ReloadTable();
+            ShowUndoSnackbar();
+            StartUndoTimer(transaction.Id);
+        }
 
+        private void StartUndoTimer(Guid transactionId)
+        {
+            undoTimer?.Dispose();
+            undoTimer = new Timer(async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await ConfirmDeleteTransactionAsync(transactionId);
+                    undoTimer?.Dispose();
+                });
+            }, null, 5000, Timeout.Infinite);
+        }
+        
+        private void ShowUndoSnackbar()
+        {
             Snackbar.Add("Transação excluída.", Severity.Error, options =>
             {
                 options.Action = "Desfazer";
                 options.RequireInteraction = false;
-                options.VisibleStateDuration = 5000; // 5 seconds
+                options.VisibleStateDuration = 5000;
 
                 options.Onclick = snackbar =>
                 {
@@ -215,57 +158,86 @@ namespace InvestmentManager.Components.Pages.Transactions
                     return Task.CompletedTask;
                 };
             }, SnackBarKey);
-
-            // Initialize the timer to confirm deletion after 5 seconds
-            _undoTimer?.Dispose(); // Dispose any existing timer
-            _undoTimer = new Timer(async _ =>
-            {
-                await InvokeAsync(() =>
-                {
-                    ConfirmDeleteTransaction(transaction.Id);
-                    _undoTimer?.Dispose(); // Dispose the timer after execution
-                });
-            }, null, 5000, Timeout.Infinite);
         }
 
         private void UndoDeleteTransaction()
         {
-            if (_tempDeletedTransaction != null)
+            if (tempDeletedTransaction != null)
             {
-                transactionList.Add(_tempDeletedTransaction);
-                _tempDeletedTransaction = null;
-
+                transactions.Add(tempDeletedTransaction);
+                tempDeletedTransaction = null;
                 ReloadTable();
             }
-
-            _undoTimer?.Dispose();
+            undoTimer?.Dispose();
         }
 
-        private void ConfirmDeleteTransaction(Guid id)
+        private async Task ConfirmDeleteTransactionAsync(Guid id)
         {
-            _transactionService.RemoveAsync(id);
+            await TransactionService.RemoveAsync(id);
             Snackbar.RemoveByKey(SnackBarKey);
-            _tempDeletedTransaction = null;
-            _undoTimer?.Dispose();
+            tempDeletedTransaction = null;
+            undoTimer?.Dispose();
         }
 
-        private void OnTickerValueChanged(string value)
+        #endregion
+
+        #region Utility Methods
+        private static string GetAssetTypeDescription(AssetType assetType) => assetType.ToDescription();
+        private void ToggleAddForm() => isAddFormVisible = !isAddFormVisible;
+        private void ReloadTable() => StateHasChanged();
+
+        private static Transaction InitializeNewTransaction()
         {
-            var asset = assets.FirstOrDefault(a => a.Ticker.Equals(value, StringComparison.OrdinalIgnoreCase));
-            
-            if (asset is not null)
+            return new Transaction
             {
-                newTransaction.Asset = new()
+                Id = Guid.NewGuid(),
+                TransactionDate = DateTime.Today,
+                UnitPrice = 1.00m,
+                OtherCosts = 0.00m,
+                Quantity = 1.00m,
+                Asset = new Asset
                 {
-                    IsinCode = asset.IsinCode,
-                    CurrentPrice = asset.CurrentPrice,
-                    Ticker = asset.Ticker,
-                    Type = asset.Type
-                };
-                newTransaction.AssetIsinCode = asset.IsinCode;
-            }
+                    Type = AssetType.Stock
+                },
+                IsBuy = true
+            };
         }
-        private bool SearchItems(string value, string searchString)
+
+        private static string GetTotalValue(Transaction transaction)
+        {   
+            var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+            var format = transaction.Asset?.Type == AssetType.Cryptocurrency && Math.Floor(transaction.TotalValue) == 0
+                ? "N8"
+                : "N2";
+            return transaction.TotalValue.ToString(format, culture);
+        }
+
+        private static string GetQuantity(Transaction transaction)
+        {
+            var format = transaction.Asset?.Type == AssetType.Cryptocurrency ? "N8" : "N0";
+            return transaction.Quantity.ToString(format);
+        }
+
+        private bool FilterTransactions(Transaction transaction)
+        {
+            return MatchesSearchString(transaction) && MatchesTransactionType(transaction);
+        }
+
+        private bool MatchesSearchString(Transaction transaction)
+        {
+            return string.IsNullOrWhiteSpace(searchString) ||
+                   transaction.Asset?.Ticker.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true ||
+                   transaction.TransactionDate.ToString("dd/MM/yyyy").Contains(searchString);
+        }
+
+        private bool MatchesTransactionType(Transaction transaction)
+        {
+            return selectedTransactionType == TransactionTypeAll ||
+                   (selectedTransactionType == TransactionTypePurchase && transaction.IsBuy) ||
+                   (selectedTransactionType == TransactionTypeSale && !transaction.IsBuy);
+        }
+
+        private static bool SearchItems(string value, string searchString)
         {
             if (searchString == "")
             {
@@ -279,20 +251,20 @@ namespace InvestmentManager.Components.Pages.Transactions
 
             return false;
         }
-        private string GetQuantity(Transaction transaction)
+        #endregion
+
+        #region Events
+
+        private void OnTickerValueChanged(string value)
         {
-            if (transaction.Asset.Type == AssetType.Cryptocurrency)
+            var asset = assets.FirstOrDefault(a => a.Ticker.Equals(value, StringComparison.OrdinalIgnoreCase));
+            if (asset != null)
             {
-                return transaction.Quantity.ToString("N8");
-            }
-            else
-            {
-                return transaction.Quantity.ToString("N0");
+                newTransaction.Asset = new() { Type = asset.Type };
+                newTransaction.AssetIsinCode = asset.IsinCode;
             }
         }
-        private void ReloadTable()
-        {
-            StateHasChanged();
-        }
+
+        #endregion
     }
 }

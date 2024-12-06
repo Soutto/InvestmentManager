@@ -1,19 +1,21 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using System;
-using InvestmentManager.Models.Enums;
 namespace InvestmentManager.Utils
 {
     public static class EnumExtensions
     {
-        public static string GetDisplayName(this AssetType enumValue)
+        public static string ToDescription<TEnum>(this TEnum EnumValue) where TEnum : struct
         {
-            var displayAttribute = enumValue.GetType()
-                                            .GetField(enumValue.ToString())
-                                            ?.GetCustomAttribute<DisplayAttribute>();
+            string? enumName = EnumValue.ToString();
+            if (string.IsNullOrEmpty(enumName))
+            {
+                throw new ArgumentException("The provided enum value is invalid.", nameof(EnumValue));
+            }
 
-            return displayAttribute?.Name ?? enumValue.ToString();
+            var displayAttribute = EnumValue.GetType().GetField(enumName)?.GetCustomAttribute<DisplayAttribute>();
+            return displayAttribute?.Name ?? enumName;
         }
+
     }
 }
 

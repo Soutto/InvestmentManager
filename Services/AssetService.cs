@@ -17,7 +17,7 @@ namespace InvestmentManager.Services
         private readonly IMemoryCache _memoryCache = memoryCache;
 
         private const string GetAllKey = "AssetsCache";
-        private const string GetAllTickersTextKey = "TickersTextCache";
+        private const string GetAllAssetsTickersKey = "TickersTextCache";
 
         public async Task<List<Asset>> GetAllAsync()
         {
@@ -52,21 +52,21 @@ namespace InvestmentManager.Services
             }
         }
 
-        public async Task<List<string>> GetAllTickersTextAsync()
+        public async Task<List<string>> GetAllAssetsTickersAsync()
         {
             try
             {
-                if (_memoryCache.TryGetValue(GetAllTickersTextKey, out List<string>? cachedTickersText))
+                if (_memoryCache.TryGetValue(GetAllAssetsTickersKey, out List<string>? cachedAssetsTickers))
                 {
-                    if (!cachedTickersText.IsNullOrEmpty())
+                    if (!cachedAssetsTickers.IsNullOrEmpty())
                     {
-                        return cachedTickersText!;
+                        return cachedAssetsTickers!;
                     }
                     
-                    throw new Exception("Tickers text not found");
+                    throw new Exception("Assets tickers text not found");
                 }
 
-                var tickersText = await _assetRepository
+                var assetsTickers = await _assetRepository
                                 .Query()
                                 .OrderBy(a => a.Ticker)
                                 .Select(a => a.Ticker)
@@ -75,20 +75,21 @@ namespace InvestmentManager.Services
 
                 var cacheOptions = new MemoryCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10), // Cache duration
-                    SlidingExpiration = TimeSpan.FromMinutes(5) // Reset expiration on access
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10), 
+                    SlidingExpiration = TimeSpan.FromMinutes(5) 
                 };
 
-                _memoryCache.Set(GetAllTickersTextKey, tickersText, cacheOptions);
+                _memoryCache.Set(GetAllAssetsTickersKey, assetsTickers, cacheOptions);
 
-                return tickersText;
+                return assetsTickers;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving assets");
+                _logger.LogError(ex, "Error retrieving assets tickers");
                 throw;
             }
         }
+        
        public async Task<Asset> GetByIdAsync(string isinCode)
         {
             if (string.IsNullOrEmpty(isinCode))
