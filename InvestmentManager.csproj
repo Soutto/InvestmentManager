@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-InvestmentManager-e4d0b75a-02fa-4fcd-b12d-c859ba0bfe19</UserSecretsId>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> 
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +24,7 @@
     <PackageReference Include="MudBlazor" Version="7.*" />
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="2.*" />
     <PackageReference Include="MudBlazor.Translations" Version="1.5.1" />
+    <PackageReference Include="Shared" Version="2.5.0" />
   </ItemGroup>
 
 </Project>
