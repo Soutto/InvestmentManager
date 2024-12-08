@@ -1,9 +1,7 @@
-﻿using InvestmentManager.Data;
-using InvestmentManager.Models.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace InvestmentManager.Models
+namespace InvestmentManager.Shared.Models
 {
     public class Transaction
     {

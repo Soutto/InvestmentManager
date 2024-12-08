@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using InvestmentManager.Data;
+using InvestmentManager.Shared.Models;
 
 namespace InvestmentManager.Components.Account;
 

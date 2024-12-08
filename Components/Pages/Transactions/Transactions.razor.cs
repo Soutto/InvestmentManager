@@ -1,5 +1,5 @@
-using InvestmentManager.Models;
-using InvestmentManager.Models.Enums;
+using InvestmentManager.Shared.Models;
+using InvestmentManager.Shared.Models.Enums;
 using InvestmentManager.Services.Interfaces;
 using InvestmentManager.Utils;
 using Microsoft.AspNetCore.Components;

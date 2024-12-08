@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using InvestmentManager.Models.Enums;
+using InvestmentManager.Shared.Models.Enums;
 
-namespace InvestmentManager.Models
+namespace InvestmentManager.Shared.Models
 {
     public class Asset
     {

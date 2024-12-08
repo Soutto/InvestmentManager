@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-using InvestmentManager.Data;
+using InvestmentManager.Shared.Models;
 
 namespace InvestmentManager.Components.Account;
 

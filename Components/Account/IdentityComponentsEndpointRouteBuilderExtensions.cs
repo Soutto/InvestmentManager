@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using InvestmentManager.Components.Account.Pages;
 using InvestmentManager.Components.Account.Pages.Manage;
-using InvestmentManager.Data;
+using InvestmentManager.Shared.Models;
 
 namespace Microsoft.AspNetCore.Routing;
 

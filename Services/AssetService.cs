@@ -1,5 +1,5 @@
 using InvestmentManager.Data.Repositories.Interfaces;
-using InvestmentManager.Models;
+using InvestmentManager.Shared.Models;
 using InvestmentManager.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;

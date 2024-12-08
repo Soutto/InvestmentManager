@@ -1,4 +1,4 @@
-using InvestmentManager.Models;
+using InvestmentManager.Shared.Models;
 
 namespace InvestmentManager.Services.Interfaces
 {

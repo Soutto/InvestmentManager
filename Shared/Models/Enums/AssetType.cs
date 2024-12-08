@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace InvestmentManager.Models.Enums
+namespace InvestmentManager.Shared.Models.Enums
 {
     public enum AssetType
     {

@@ -13,6 +13,7 @@ using MudBlazor.Translations;
 using MudBlazor;
 using InvestmentManager.Utils;
 using MudExtensions.Services;
+using InvestmentManager.Shared.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
