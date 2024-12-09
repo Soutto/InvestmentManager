@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackgroundTasks", "Backgrou
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{6D55D329-962D-47F4-A475-1EE4D2FAF99E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientRunner", "ClientRunner\ClientRunner.csproj", "{539048CE-D1B0-4617-985B-FD5717CA6CF1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{6D55D329-962D-47F4-A475-1EE4D2FAF99E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D55D329-962D-47F4-A475-1EE4D2FAF99E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D55D329-962D-47F4-A475-1EE4D2FAF99E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{539048CE-D1B0-4617-985B-FD5717CA6CF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{539048CE-D1B0-4617-985B-FD5717CA6CF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{539048CE-D1B0-4617-985B-FD5717CA6CF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{539048CE-D1B0-4617-985B-FD5717CA6CF1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -17,7 +17,7 @@ namespace Client
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<string>(content);
+            return content;
         }
     }
 }

@@ -25,13 +25,13 @@
             }
         },
         {
-            "name": ".NET Core Launch (client)",
+            "name": ".NET Core Launch (clientRunner)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Client/bin/Debug/net8.0/Client.dll",
+            "program": "${workspaceFolder}/ClientRunner/bin/Debug/net8.0/ClientRunner.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Client",
+            "cwd": "${workspaceFolder}/ClientRunner",
             "stopAtEntry": false
         },
         {
@@ -45,7 +45,7 @@
             "name": "Launch Both Projects",
             "configurations": [
                 ".NET Core Launch (web)",
-                ".NET Core Launch (client)"
+                ".NET Core Launch (clientRunner)"
             ]
         }
     ]
