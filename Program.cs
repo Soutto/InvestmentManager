@@ -14,6 +14,8 @@ using MudBlazor;
 using InvestmentManager.Utils;
 using MudExtensions.Services;
 using InvestmentManager.Shared.Models;
+using DadosDeMercadoClient.Interfaces;
+using DadosDeMercadoClient.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +52,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<IAssetClient, AssetClient>();
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 
@@ -59,9 +61,10 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 #endregion
 
 #region Services
-//builder.Services.AddScoped<BrapiIntegrationService, BrapiIntegrationService>();
+
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAssetService, AssetService>();
+
 #endregion
 
 var app = builder.Build();

@@ -1,5 +1,6 @@
 ﻿using InvestmentManager.Data;
 using InvestmentManager.Data.Repositories.Interfaces;
+using InvestmentManager.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace PortofolioManager.Infrastructure.Repositories
@@ -25,15 +26,16 @@ namespace PortofolioManager.Infrastructure.Repositories
             return await _dbSet.AsNoTracking().ToListAsync();
         }
 
-        public async Task AddAsync(TEntity entity)
+        public async Task<List<TEntity>> GetAllTrackedAsync()
         {
-            //TODO Remover esse método assincrono
-            await _dbSet.AddAsync(entity);
+            return await _dbSet.ToListAsync();
         }
-       public void Add(TEntity entity)
+
+        public void Add(TEntity entity)
         {
-             _dbSet.Add(entity);
+            _dbSet.Add(entity);
         }
+
         public void Update(TEntity entity)
         {
             _dbSet.Update(entity);
@@ -55,7 +57,7 @@ namespace PortofolioManager.Infrastructure.Repositories
             //Reniver esse metodo assincrono.
             await _context.SaveChangesAsync();
         }
-              public void SaveChanges()
+        public void SaveChanges()
         {
             _context.SaveChanges();
         }

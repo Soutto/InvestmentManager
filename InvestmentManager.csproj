@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="7.1.0" />
+    <PackageReference Include="DadosDeMercadoClient" Version="1.2.0" />
     <PackageReference Include="InvestmentManager.Shared" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.*" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.*" />
@@ -25,7 +26,6 @@
     <PackageReference Include="MudBlazor" Version="7.*" />
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="2.*" />
     <PackageReference Include="MudBlazor.Translations" Version="1.5.1" />
-    <PackageReference Include="Shared" Version="2.5.0" />
   </ItemGroup>
 
 </Project>

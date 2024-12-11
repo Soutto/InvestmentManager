@@ -1,11 +1,13 @@
 ﻿
+using InvestmentManager.Shared.Models;
+
 namespace InvestmentManager.Data.Repositories.Interfaces
 {
     public interface IRepository<TEntity> where TEntity : class
     {
         Task<TEntity?> GetByIdAsync<TId>(TId id) where TId : notnull;
         Task<List<TEntity>> GetAllAsync();
-        Task AddAsync(TEntity entity);
+        Task<List<TEntity>> GetAllTrackedAsync();
         void Update(TEntity entity);
         void Remove(TEntity entity);
         IQueryable<TEntity> Query();

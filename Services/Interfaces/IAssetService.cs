@@ -7,5 +7,6 @@ namespace InvestmentManager.Services.Interfaces
         Task<List<Asset>> GetAllAsync();
         Task<List<string>> GetAllAssetsTickersAsync();
         Task<Asset> GetByIdAsync(string isinCode);
+        Task SyncApiAssetsWithDatabaseAsync();
     }
 }
