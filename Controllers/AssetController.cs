@@ -6,14 +6,9 @@ namespace InvestmentManager.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AssetController : ControllerBase
+    public class AssetController(IAssetService assetService) : ControllerBase
     {
-        private readonly IAssetService AssetService;
-
-        public AssetController(IAssetService assetService)
-        {
-            AssetService = assetService;
-        }
+        private readonly IAssetService AssetService = assetService;
 
         [HttpGet("GetAll")]
         public async Task<List<Asset>> GetAllAssets()
