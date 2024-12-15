@@ -16,6 +16,7 @@ using MudExtensions.Services;
 using InvestmentManager.Shared.Models;
 using DadosDeMercadoClient.Interfaces;
 using DadosDeMercadoClient.Clients;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +54,6 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddHttpClient<IAssetClient, AssetClient>();
-builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 
 #region Repositories
@@ -64,8 +64,15 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAssetService, AssetService>();
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 #endregion
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = builder.Configuration.GetSection("Redis")["ConnectionString"];
+    return ConnectionMultiplexer.Connect(configuration!);
+});
 
 var app = builder.Build();
 
@@ -92,5 +99,13 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 app.MapControllers();
+
+app.MapGet("/redis-test", async (IConnectionMultiplexer redis) =>
+{
+    var db = redis.GetDatabase();
+    await db.StringSetAsync("key", "value");
+    var value = await db.StringGetAsync("key");
+    return Results.Ok($"Redis key value: {value}");
+});
 
 app.Run();

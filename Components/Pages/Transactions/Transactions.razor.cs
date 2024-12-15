@@ -11,10 +11,10 @@ namespace InvestmentManager.Components.Pages.Transactions
     public partial class Transactions : ComponentBase
     {
         #region Dependencies (Injected Services)
-        [Inject] private ISnackbar Snackbar { get; set; } = default!;
-        [Inject] private IAssetService AssetService { get; set; } = default!;
-        [Inject] private ITransactionService TransactionService { get; set; } = default!;
-        [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+        [Inject] private ISnackbar _snackbar { get; set; } = default!;
+        [Inject] private IAssetService _assetService { get; set; } = default!;
+        [Inject] private ITransactionService _transactionService { get; set; } = default!;
+        [Inject] private AuthenticationStateProvider _authStateProvider { get; set; } = default!;
         #endregion
 
         #region Properties and Fields
@@ -43,9 +43,9 @@ namespace InvestmentManager.Components.Pages.Transactions
 
         #region Initialization and Data Loading
         
-        private async Task LoadAssetsAsync() => assets = await AssetService.GetAllAsync();
-        private async Task LoadTransactionsAsync() => transactions = await TransactionService.GetAllByUserIdAsync(UserId!);
-        private async Task LoadAssetsTickersAsync() => assetTickers = await AssetService.GetAllAssetsTickersAsync();
+        private async Task LoadAssetsAsync() => assets = await _assetService.GetAllAsync();
+        private async Task LoadTransactionsAsync() => transactions = await _transactionService.GetUserTransactionsAsync(UserId!);
+        private async Task LoadAssetsTickersAsync() => assetTickers = await _assetService.GetAllAssetsTickersAsync();
 
         protected override async Task OnInitializedAsync()
         {
@@ -77,7 +77,7 @@ namespace InvestmentManager.Components.Pages.Transactions
 
         private async Task<string?> GetUserIdAsync()
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
 
             return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
         }
@@ -91,11 +91,11 @@ namespace InvestmentManager.Components.Pages.Transactions
 
             await PopulateTransactionDetailsAsync();
 
-            TransactionService.Add(newTransaction);
+            await _transactionService.AddAsync(newTransaction);
 
             transactions.Add(newTransaction);
 
-            Snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
+            _snackbar.Add($"Transação adicionada com sucesso.", Severity.Success);
 
             newTransaction = InitializeNewTransaction();
 
@@ -107,20 +107,20 @@ namespace InvestmentManager.Components.Pages.Transactions
             newTransaction.UserId = UserId;
             newTransaction.CreateDate = DateTime.Now;
             newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
-            newTransaction.Asset = await AssetService.GetByIdAsync(newTransaction.AssetIsinCode);
+            newTransaction.Asset = await _assetService.GetByIdAsync(newTransaction.AssetIsinCode);
         }
         
         private void DeleteTransaction(object? obj)
         {
             if (obj is null || obj is not Transaction transaction)
             {
-                Snackbar.Add("Invalid transaction.", Severity.Error);
+                _snackbar.Add("Invalid transaction.", Severity.Error);
                 return;
             }
 
             if (!transactions.Remove(transaction))
             {
-                Snackbar.Add("Transaction not found.", Severity.Warning);
+                _snackbar.Add("Transaction not found.", Severity.Warning);
                 return;
             }
 
@@ -145,7 +145,7 @@ namespace InvestmentManager.Components.Pages.Transactions
         
         private void ShowUndoSnackbar()
         {
-            Snackbar.Add("Transação excluída.", Severity.Error, options =>
+            _snackbar.Add("Transação excluída.", Severity.Error, options =>
             {
                 options.Action = "Desfazer";
                 options.RequireInteraction = false;
@@ -154,7 +154,7 @@ namespace InvestmentManager.Components.Pages.Transactions
                 options.Onclick = snackbar =>
                 {
                     UndoDeleteTransaction();
-                    Snackbar.RemoveByKey(SnackBarKey);
+                    _snackbar.RemoveByKey(SnackBarKey);
                     return Task.CompletedTask;
                 };
             }, SnackBarKey);
@@ -173,8 +173,8 @@ namespace InvestmentManager.Components.Pages.Transactions
 
         private async Task ConfirmDeleteTransactionAsync(Guid id)
         {
-            await TransactionService.RemoveAsync(id);
-            Snackbar.RemoveByKey(SnackBarKey);
+            await _transactionService.RemoveAsync(id);
+            _snackbar.RemoveByKey(SnackBarKey);
             tempDeletedTransaction = null;
             undoTimer?.Dispose();
         }

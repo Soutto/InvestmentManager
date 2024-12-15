@@ -122,7 +122,7 @@
           @bind-SelectedItem="selectedItem1" 
           SortLabel="Sort By" 
           CommitEditTooltip="Commit Edit" 
-          OnCommitEditClick="@(() => Snackbar.Add(" Commit Edit Handler Invoked"))" 
+          OnCommitEditClick="@(() => _snackbar.Add(" Commit Edit Handler Invoked"))" 
           IsEditRowSwitchingBlocked="true" 
           ApplyButtonPosition="TableApplyButtonPosition.End" 
           EditButtonPosition="TableEditButtonPosition.End"

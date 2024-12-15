@@ -1,49 +1,37 @@
 using InvestmentManager.Data.Repositories.Interfaces;
 using InvestmentManager.Shared.Models;
 using InvestmentManager.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.IdentityModel.Tokens;
 using DadosDeMercadoClient.Interfaces;
+using InvestmentManager.Exceptions;
+using InvestmentManager.Shared.Factories;
 
 namespace InvestmentManager.Services
 {
     /// <summary>
     /// Provides services for managing assets with caching.
     /// </summary>
-    public class AssetService(IRepository<Asset> assetRepository, ILogger<AssetService> logger, IMemoryCache memoryCache, IAssetClient assetClient) : IAssetService
+    public class AssetService(IRepository<Asset> assetRepository, ILogger<AssetService> logger, ICacheService cacheService, IAssetClient assetClient) : IAssetService
     {
         private readonly IRepository<Asset> _assetRepository = assetRepository;
         private readonly ILogger<AssetService> _logger = logger;
-        private readonly IMemoryCache _memoryCache = memoryCache;
+        private readonly ICacheService _cacheService = cacheService;
         private readonly IAssetClient _assetClient = assetClient;
 
-        private const string GetAllKey = "AssetsCache";
-        private const string GetAllAssetsTickersKey = "TickersTextCache";
+
+        #region Public Methods
 
         public async Task<List<Asset>> GetAllAsync()
         {
             try
             {
-                if (_memoryCache.TryGetValue(GetAllKey, out List<Asset>? cachedAssets))
-                {
-                    if (!cachedAssets.IsNullOrEmpty())
-                    {
-                        return cachedAssets!;
-                    }
+                var assets = await _cacheService.GetOrSetAsync(key: CacheKeysFactory.Assets(),
+                                                               getFromSource: _assetRepository.GetAllAsync);
 
-                    throw new Exception("Assets not found");
+
+                if (assets is null || assets.Count == 0)
+                {
+                    throw new AssetsNotFoundException("Assets not found"); 
                 }
-
-                var assets = await _assetRepository.Query().OrderBy(a => a.Ticker).AsNoTracking().ToListAsync();
-
-                var cacheOptions = new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10), // Cache duration
-                    SlidingExpiration = TimeSpan.FromMinutes(5) // Reset expiration on access
-                };
-
-                _memoryCache.Set(GetAllKey, assets, cacheOptions);
 
                 return assets;
             }
@@ -54,63 +42,69 @@ namespace InvestmentManager.Services
             }
         }
 
+        public async Task<Dictionary<string, Asset>> GetAllDictionaryAsync()
+        {
+            try
+            {
+                var assetsDictionary = await _cacheService.GetOrSetAsync(key: CacheKeysFactory.AssetsDictionary(),
+                                                                         getFromSource: GetAssetsDictionaryAsync);
+
+                if (assetsDictionary is null || assetsDictionary.Count == 0)
+                {
+                    throw new AssetsNotFoundException("Assets dictionary not found");
+                }
+
+                return assetsDictionary;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving assets");
+                throw;
+            }
+
+            async Task<Dictionary<string, Asset>> GetAssetsDictionaryAsync()
+            {
+                var assets = await GetAllAsync();
+                return assets.ToDictionary(a => a.IsinCode, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
         public async Task<List<string>> GetAllAssetsTickersAsync()
         {
             try
             {
-                if (_memoryCache.TryGetValue(GetAllAssetsTickersKey, out List<string>? cachedAssetsTickers))
-                {
-                    if (!cachedAssetsTickers.IsNullOrEmpty())
-                    {
-                        return cachedAssetsTickers!;
-                    }
+                var assetsTickers = await _cacheService.GetOrSetAsync(key: CacheKeysFactory.AssetsTickers(),
+                                                                      getFromSource: GetAssetsTickersAsync);
 
-                    throw new Exception("Assets tickers text not found");
+                if (assetsTickers is null || assetsTickers.Count == 0)
+                {
+                    throw new AssetsNotFoundException("Assets dictionary not found");
                 }
-
-                var assetsTickers = await _assetRepository
-                                .Query()
-                                .OrderBy(a => a.Ticker)
-                                .Select(a => a.Ticker)
-                                .AsNoTracking()
-                                .ToListAsync();
-
-                var cacheOptions = new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                    SlidingExpiration = TimeSpan.FromMinutes(5)
-                };
-
-                _memoryCache.Set(GetAllAssetsTickersKey, assetsTickers, cacheOptions);
 
                 return assetsTickers;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving assets tickers");
+                _logger.LogError(ex, "Error retrieving assets");
                 throw;
+            }
+
+            async Task<List<string>> GetAssetsTickersAsync()
+            {
+                var assets = await GetAllAsync();
+                return assets.Select(a => a.Ticker).ToList();
             }
         }
 
         public async Task<Asset> GetByIdAsync(string isinCode)
         {
-            if (string.IsNullOrEmpty(isinCode))
-            {
-                _logger.LogError("Attempted to find a asset");
-                throw new ArgumentNullException(nameof(isinCode), "IsinCode cannot be null.");
-            }
+            ArgumentException.ThrowIfNullOrEmpty(isinCode, nameof(isinCode));
 
             try
             {
                 var asset = await _assetRepository.GetByIdAsync(isinCode);
 
-                if (asset is null)
-                {
-                    _logger.LogWarning("Asset not found. IsinCode: {isinCode}", isinCode);
-                    throw new KeyNotFoundException($"Asset with IsinCode {isinCode} not found.");
-                }
-
-                return asset;
+                return asset is null ? throw new KeyNotFoundException($"Asset with IsinCode {isinCode} not found.") : asset;
             }
             catch (Exception ex)
             {
@@ -119,6 +113,7 @@ namespace InvestmentManager.Services
             }
         }
 
+        //TODO - Por enquanto só está atualizando as ações para ver como vai ficando, depois precisa atualizar para pegar os outros tipos de ativos.
         public async Task SyncApiAssetsWithDatabaseAsync()
         {
             try
@@ -139,7 +134,9 @@ namespace InvestmentManager.Services
                 throw;
             }
         }
+        #endregion
 
+        #region Private Methods
         private async Task SaveChangesAsync()
         {
             await _assetRepository.SaveChangesAsync();
@@ -174,18 +171,10 @@ namespace InvestmentManager.Services
             }
         }
 
-        /// <summary>
-        /// Clears the cache for assets.
-        /// </summary>
-        public void ClearCache()
-        {
-            _memoryCache.Remove(GetAllKey);
-            _logger.LogInformation("Assets cache cleared.");
-        }
-
         private static Asset? FindMatchingAsset(List<Asset> databaseStocks, Asset updatedStock)
         {
             return databaseStocks.FirstOrDefault(s => s.IsinCode.Equals(updatedStock.IsinCode, StringComparison.OrdinalIgnoreCase));
         }
+        #endregion
     }
 }
