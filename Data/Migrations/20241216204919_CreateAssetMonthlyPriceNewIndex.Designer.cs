@@ -4,6 +4,7 @@ using InvestmentManager.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InvestmentManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241216204919_CreateAssetMonthlyPriceNewIndex")]
+    partial class CreateAssetMonthlyPriceNewIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,11 +115,7 @@ namespace InvestmentManager.Migrations
             modelBuilder.Entity("InvestmentManager.Shared.Models.AssetMonthlyPrice", b =>
                 {
                     b.Property<string>("AssetIsinCode")
-                        .HasMaxLength(12)
                         .HasColumnType("nvarchar(12)");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -124,7 +123,10 @@ namespace InvestmentManager.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.HasKey("AssetIsinCode", "Year", "Month");
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("AssetIsinCode");
 
                     b.HasIndex("AssetIsinCode", "Year", "Month")
                         .HasDatabaseName("AssetIsinCode_Year_Month_Index");

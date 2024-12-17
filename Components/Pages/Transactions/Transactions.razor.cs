@@ -50,6 +50,7 @@ namespace InvestmentManager.Components.Pages.Transactions
         protected override async Task OnInitializedAsync()
         {
             UserId = await GetUserIdAsync();
+
             if (string.IsNullOrEmpty(UserId))
             {
                 throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
@@ -64,15 +65,6 @@ namespace InvestmentManager.Components.Pages.Transactions
             await LoadAssetsAsync();
             await LoadAssetsTickersAsync();
             await LoadTransactionsAsync();
-            
-            //TODO Criar uma factory para os dbcontexts para rodar o metodo assincrono.
-            /*var tasks = new Task[]
-            {
-                LoadAssetsAsync(),
-                LoadAssetsTickers(),
-                LoadTransactionsAsync()
-            };
-            await Task.WhenAll(tasks);*/
         }
 
         private async Task<string?> GetUserIdAsync()

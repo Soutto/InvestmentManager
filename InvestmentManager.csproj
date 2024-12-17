@@ -16,8 +16,8 @@
 
   <ItemGroup>
     <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="7.1.0" />
-    <PackageReference Include="DadosDeMercadoClient" Version="1.2.0" />
-    <PackageReference Include="InvestmentManager.Shared" Version="1.1.1-Beta06" />
+    <PackageReference Include="DadosDeMercadoClient" Version="1.3.0-Beta01" />
+    <PackageReference Include="InvestmentManager.Shared" Version="1.1.1-Beta14" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.*" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.*" />
