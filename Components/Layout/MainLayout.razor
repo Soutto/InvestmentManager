@@ -1,65 +1,196 @@
-﻿@inherits LayoutComponentBase
+﻿@using InvestmentManager.Components.Pages.Footer
+@inherits LayoutComponentBase
 
 <MudThemeProvider />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudLayout>
-<MudAppBar Elevation="1" Class="app-bar">
-    <!-- Botão do menu à esquerda -->
-    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-<!-- Espaçador flexível -->
-    <div class="flex-spacer"></div>
-    <!-- Imagem centralizada -->
-    <MudLink Href="/">
-        <MudImage Src="logo.png" Alt="Application Logo" Class="app-logo" Width="200" Height="50" Style="margin-top: 6px; " />
-    </MudLink>
+	<MudAppBar Elevation="4" Class="app-bar">
+		<AuthorizeView>
+			<Authorized>
+				<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+				<div class="flex-spacer"></div>
+				<div style="width: 70px;"></div>
+				<MudLink Href="portfolio">
+					<img Src="logo.png" Alt="Application Logo" Class="app-logo" Width="200" Height="50" Style="margin-top: 6px; " />
+				</MudLink>
+				<div class="flex-spacer"></div>
+			</Authorized>
+			<NotAuthorized>
+				<div style="width: 300px;"></div>
+				<div class="flex-spacer"></div>
+				<MudLink Href="">
+					<img Src="logo.png" Alt="Application Logo" Class="app-logo" Width="200" Height="50" Style="margin-top: 6px; " />
+				</MudLink>
+				<div class="flex-spacer"></div>
+				<MudButton Href="Account/Login" Style="display: flex; justify-content: flex-end; margin-right: 8px; background-color: #1976D2; color: white;" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Person" Size="Size.Medium">
+					Entrar
+				</MudButton>
+				<MudButton Href="Account/Register" Style="display: flex; justify-content: flex-end;" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.PersonAdd" Color="Color.Info" Size="Size.Medium">
+					Criar conta
+				</MudButton>
+			</NotAuthorized>
+		</AuthorizeView>
+	</MudAppBar>
 
-    <!-- Espaçador flexível -->
-    <div class="flex-spacer"></div>
+	<AuthorizeView>
+		<Authorized>
+			<MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+				<NavMenu />
+			</MudDrawer>
+		</Authorized>
+		<NotAuthorized>
 
-    <!-- Botão à direita -->
-    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-</MudAppBar>
+		</NotAuthorized>
+	</AuthorizeView>
 
+	<MudMainContent Class="@mainContentClass">
+		@Body
+	</MudMainContent>
+	<AuthorizeView>
+		<NotAuthorized>
+			<footer class="footer-section">
+				<MudContainer MaxWidth="MudBlazor.MaxWidth.False" Class="footer-content">
+					<!-- Logo Section -->
+					<div class="footer-logo">
+						<img Src="logo.png" Alt="Application Logo" Class="app-logo" Width="200" Height="50" Style="margin-top: 6px;" />
+					</div>
 
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
-    </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
-        @Body
-    </MudMainContent>
+					<!-- Footer Navigation -->
+					<div class="footer-links">
+						<MudLink Href="/contato" Class="footer-link">Contato</MudLink>
+						<MudLink Href="/sobre" Class="footer-link">Sobre</MudLink>
+						<MudLink Href="/account/privacypolicy" Class="footer-link">Política de Privacidade</MudLink>
+						<MudLink Href="/account/termsofuse" Class="footer-link">Termos de Uso</MudLink>
+					</div>
+
+					<MudDivider Class="my-4" />
+
+					<!-- Bottom Section -->
+					<div class="footer-bottom">
+						<MudText Typo="Typo.caption" Class="footer-copy">
+							© @(DateTime.Now.Year) SuaMarca. Todos os direitos reservados.
+						</MudText>
+					</div>
+				</MudContainer>
+			</footer>
+		</NotAuthorized>
+	</AuthorizeView>
 </MudLayout>
 
-
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+	An unhandled error has occurred.
+	<a href="" class="reload">Reload</a>
+	<a class="dismiss">🗙</a>
 </div>
 
 @code {
-    private bool _drawerOpen = true;
+	private bool _drawerOpen = true;
+	private string mainContentClass = "mt-16 pa-4";
 
-    private void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
+	[Inject] NavigationManager NavigationManager { get; set; } = default!;
 
+	protected override void OnInitialized()
+	{
+		UpdateMainContentClass();
+		NavigationManager.LocationChanged += OnLocationChanged;
+	}
+
+	private void DrawerToggle()
+	{
+		_drawerOpen = !_drawerOpen;
+	}
+
+	private void UpdateMainContentClass()
+	{
+		var specialPaths = new[] { "/", "/", "/Login", "/Register", "/TermsOfUse", "/PrivacyPolicy" };
+		var currentUri = NavigationManager.Uri;
+
+		if (specialPaths.Any(path => currentUri.EndsWith(path, StringComparison.OrdinalIgnoreCase)))
+		{
+			// Apply a different class for special paths
+			_drawerOpen = false;
+			mainContentClass = "mt-0 pa-0";
+		}
+		else
+		{
+			// Default class for other pages
+			mainContentClass = "mt-16 pa-4";
+		}
+	}
+
+	private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+	{
+		UpdateMainContentClass();
+		StateHasChanged(); // Trigger re-render
+	}
+
+	public void Dispose()
+	{
+		NavigationManager.LocationChanged -= OnLocationChanged;
+	}
 }
 
 <style>
-    .app-bar {
-    background: linear-gradient(90deg, #1A237E, #0D47A1);
-    color: white;
-    display: flex;
-}
+	.app-bar {
+		background: linear-gradient(90deg, #1A237E 0%, #0D47A1 100%);
+		color: white;
+		display: flex;
+	}
 
-.flex-spacer {
-    flex: 1;
-}
+	.flex-spacer {
+		flex: 1;
+	}
 
-.app-logo {
-    /* Se necessário, ajuste a margem ou outros estilos aqui */
-}
+	.app-logo {
+		/* Se necessário, ajuste a margem ou outros estilos aqui */
+	}
+
+	.footer-section {
+		background: linear-gradient(135deg, #1A237E 0%, #0D47A1 100%);
+		color: white;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		padding: 2rem;
+	}
+
+	.footer-logo {
+		margin-bottom: 1.5rem;
+	}
+
+	.footer-links {
+		display: flex;
+		gap: 1.5rem;
+		justify-content: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.footer-link {
+		color: white;
+		text-decoration: none;
+		font-weight: bold;
+	}
+
+		.footer-link:hover {
+			text-decoration: underline;
+		}
+
+	.footer-help {
+		max-width: 600px;
+		text-align: center; /* Ensures proper alignment */
+		margin-bottom: 1.5rem;
+	}
+
+	.footer-title {
+		margin-bottom: 0.5rem;
+	}
+
+	.footer-copy {
+		margin-top: 1rem;
+		font-size: 0.875rem;
+		color: #ccc;
+	}
 </style>

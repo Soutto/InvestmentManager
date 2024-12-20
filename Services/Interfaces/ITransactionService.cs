@@ -11,5 +11,6 @@ namespace InvestmentManager.Services.Interfaces
         Task AddAsync(Transaction transaction);
         Task RemoveAsync(Guid id);
         Task<Portfolio> GetPortfolioAsync(string? userId);
+        Task<MonthlyHeritageEvolution> GetMonthlyHeritageEvolutionAsync(string? userId, int monthsToInclude);
     }
 }

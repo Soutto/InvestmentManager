@@ -14,6 +14,7 @@ namespace InvestmentManager.Data.Repositories.Interfaces
         Task SaveChangesAsync();
         void SaveChanges();
         void Add(TEntity entity);
+        void AddRange(List<TEntity> entities);
     }
 
 }

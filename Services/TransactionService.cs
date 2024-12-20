@@ -6,20 +6,23 @@ using InvestmentManager.Shared.Models.DTOs;
 using InvestmentManager.Shared.Models.Application;
 using InvestmentManager.Shared.Factories;
 using InvestmentManager.Exceptions;
-using InvestmentManager.Utils;
 using System.Collections.ObjectModel;
+using Microsoft.CodeAnalysis;
 
 namespace InvestmentManager.Services
 {
     /// <summary>
     /// Provides services for managing transactions.
     /// </summary>
-    public class TransactionService(IRepository<Transaction> transactionRepository, ILogger<TransactionService> logger, ICacheService cacheService, IAssetService assetService) : ITransactionService
+    public class TransactionService(IRepository<Transaction> transactionRepository, ILogger<TransactionService> logger, ICacheService cacheService, IAssetService assetService, IAssetMonthlyPriceService assetMonthlyPriceService) : ITransactionService
     {
         private readonly IRepository<Transaction> _transactionRepository = transactionRepository;
         private readonly ILogger<TransactionService> _logger = logger;
         private readonly ICacheService _cacheService = cacheService;
         private readonly IAssetService _assetService = assetService;
+        private readonly IAssetMonthlyPriceService _assetMonthlyPriceService = assetMonthlyPriceService;
+
+        private static readonly HashSet<int> AllowedMonths = [3, 6, 12, 60, 360];
 
         public async Task AddAsync(Transaction transaction)
         {
@@ -124,11 +127,10 @@ namespace InvestmentManager.Services
                 .GroupBy(t => t.AssetIsinCode)
                 .Select(group =>
                 {
-
                     return new PortfolioAsset
                     {
                         Asset = assets.First(a => a.IsinCode.Equals(group.Key, StringComparison.OrdinalIgnoreCase)),
-                        Quantity = group.Sum(t => t.Quantity),
+                        Quantity = group.Sum(t => t.IsBuy ? t.Quantity : -t.Quantity),
                         TotalPurchaseValue = group.Where(t => t.IsBuy).Sum(t => t.Quantity * t.UnitPrice),
                         TotalQuantityPurchased = group.Where(t => t.IsBuy).Sum(t => t.Quantity)
                     };
@@ -167,99 +169,220 @@ namespace InvestmentManager.Services
             }
         }
 
-        public async Task<MonthlyHeritageEvolution> GetMonthlyHeritageEvolutionAsync (string? userId)
+        /// <summary>
+        /// Calculates the monthly evolution of a user's financial holdings (heritage) based on their transactions 
+        /// and a specified reporting period. The method processes transactions, computes cumulative holdings 
+        /// for each month, retrieves corresponding asset prices, and generates a monthly heritage evolution report.
+        /// </summary>
+        /// <param name="userId">The unique identifier of the user whose transactions are to be processed.</param>
+        /// <param name="monthsToInclude">
+        /// The number of months to include in the heritage evolution report. If the user has fewer transactions 
+        /// than the specified months, all available data will be included.
+        /// </param>
+        /// <returns>
+        /// A task representing the asynchronous operation, returning a <see cref="MonthlyHeritageEvolution"/> 
+        /// object containing a list of monthly heritage records for the specified period.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="userId"/> is null or empty, or if <paramref name="monthsToInclude"/> is less than or equal to zero.
+        /// </exception>
+        /// <remarks>
+        /// - Transactions are grouped by month to compute cumulative holdings.
+        /// - Asset prices for each holding are retrieved using the corresponding month and ISIN codes.
+        /// - The report filters holdings based on the specified period (`monthsToInclude`) and adjusts 
+        ///   intervals to reduce the data volume for larger periods.
+        /// - The final report includes the total heritage value and asset-level breakdown for each month.
+        /// - If the user has no transactions, an empty report is returned.
+        /// </remarks>
+        public async Task<MonthlyHeritageEvolution> GetMonthlyHeritageEvolutionAsync(string? userId, int monthsToInclude)
         {
             ArgumentException.ThrowIfNullOrEmpty(userId);
+            ValidateMonthsToInclude(monthsToInclude);
 
-            var transactions = await GetUserTransactionsDtoAsync(userId);
-
-            if (transactions is null || transactions.Count == 0)
+            var transactions = await GetUserTransactionsOrderedAsync(userId);
+            if (transactions.Count == 0)
             {
                 return new MonthlyHeritageEvolution([]);
             }
 
-            // Identify the first and last month we need to cover
-            var firstTransactionDate = transactions.First().TransactionDate;
-            // We'll compute up to the currentDate's month
-            var startMonth = new DateTime(firstTransactionDate.Year, firstTransactionDate.Month, 1);
-            var endMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var monthlyTransactions = GroupTransactionsByMonth(transactions);
+            var (startMonth, endMonth) = GetFirstAndLastTransactionDate(transactions);
+            var monthlyHoldings = CalculateOrderedMonthlyHoldings(startMonth, endMonth, monthlyTransactions);
+            var lastHoldings = TakeLastHoldings(monthlyHoldings, monthsToInclude);
+            var intervalHoldings = TakeIntervalHoldings(lastHoldings);
+            var prices = await FetchAssetPricesAsync(intervalHoldings);
+            var records = BuildMonthlyHeritageRecords(intervalHoldings, prices);
 
-            // Group transactions by (Year, Month)
-            var monthlyTransactions = transactions
-                .OrderBy(t => t.TransactionDate)
-                .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
-                .ToDictionary(
-                    g => new DateTime(g.Key.Year, g.Key.Month, 1),
-                    g => g.OrderBy(t => t.TransactionDate).ToList() // ensure monthly internal order
-                );
-
-            // Step 1: Sequentially compute cumulative holdings at the end of each month
-            var monthlyHoldings = new List<(DateTime MonthEnd, Dictionary<string, decimal> Holdings)>();
-            var currentHoldings = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-
-            // Iterate from startMonth to endMonth month by month
-            for (var monthStart = startMonth; monthStart <= endMonth; monthStart = monthStart.AddMonths(1))
-            {
-                // Month-end = last calendar day of the month
-                var daysInMonth = DateTime.DaysInMonth(monthStart.Year, monthStart.Month);
-                var monthEnd = new DateTime(monthStart.Year, monthStart.Month, daysInMonth);
-
-                // If we have transactions for this month, apply them
-                if (monthlyTransactions.TryGetValue(monthStart, out var thisMonthTx))
-                {
-                    foreach (var t in thisMonthTx)
-                    {
-                        UpdateHoldings(currentHoldings, t.IsBuy, t.AssetIsinCode, t.Quantity);
-                    }
-                }
-                // If no transactions, holdings remain as last month
-
-                // Store a snapshot of holdings for this month-end
-                monthlyHoldings.Add((monthEnd, new Dictionary<string, decimal>(currentHoldings, StringComparer.OrdinalIgnoreCase)));
-            }
-
-            // Step 2: Parallelize price retrieval and monthly value calculation
-            //var tasks = monthlyHoldings.Select(async mh =>
-            //{
-            //    var (monthEnd, holdings) = mh;
-            //    if (holdings.Count == 0)
-            //    {
-            //        // No assets held this month
-            //        return new MonthlyHeritageRecord(
-            //            monthEndDate: monthEnd,
-            //            totalHeritage: 0m,
-            //            assetValues: new ReadOnlyDictionary<string, decimal>(new Dictionary<string, decimal>())
-            //        );
-            //    }
-
-            //    var assetIsins = holdings.Keys;
-            //    //var prices = await getClosingPricesForMonthEnd(assetIsins, monthEnd).ConfigureAwait(false); TODO, CRIAR ESSE METODO
-
-            //    // Calculate asset values for this month
-            //    var assetValues = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-            //    foreach (var kvp in holdings)
-            //    {
-            //        var isin = kvp.Key;
-            //        var quantity = kvp.Value;
-            //        var price = prices.TryGetValue(isin, out var p) ? p : 0m;
-            //        assetValues[isin] = quantity * price;
-            //    }
-
-            //    var totalValue = assetValues.Values.Sum();
-
-            //    return new MonthlyHeritageRecord(
-            //        monthEndDate: monthEnd,
-            //        totalHeritage: totalValue,
-            //        assetValues: new ReadOnlyDictionary<string, decimal>(assetValues)
-            //    );
-            //}).ToArray();
-
-            //var records = await Task.WhenAll(tasks).ConfigureAwait(false);
-            //return new MonthlyHeritageEvolution(records);
-            return new MonthlyHeritageEvolution([]);
+            return new MonthlyHeritageEvolution(records);
         }
 
         #region Private Methods
+
+        private static void ValidateMonthsToInclude(int monthsToInclude)
+        {
+            if (!AllowedMonths.Contains(monthsToInclude))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(monthsToInclude),
+                    $"The value of {nameof(monthsToInclude)} must be one of the following: {string.Join(", ", AllowedMonths)}."
+                );
+            }
+        }
+
+        /// <summary>
+        /// Filters a list of monthly holdings based on an interval, retaining every nth holding 
+        /// and always including the last holding in the list.
+        /// </summary>
+        /// <param name="monthlyHoldings">The list of <see cref="MonthlyHolding"/> objects to process.</param>
+        /// <returns>
+        /// A filtered list of <see cref="MonthlyHolding"/> objects:
+        /// - If the input list has 12 or fewer items, the original list is returned.
+        /// - If the list has more than 12 items, every 2nd or 3rd holding is retained based on the total count, 
+        ///   with the last holding always included.
+        /// </returns>
+        /// <remarks>
+        /// - An interval of 2 is used for lists with fewer than 60 items but more than 12.
+        /// - An interval of 3 is used for lists with 60 or more items.
+        /// </remarks>
+        public static IEnumerable<MonthlyHolding> TakeIntervalHoldings(IEnumerable<MonthlyHolding> monthlyHoldings)
+        {
+            if (monthlyHoldings.Count() <= 12) return monthlyHoldings;
+
+            int interval = monthlyHoldings.Count() >= 60 ? 3 : 2;
+
+            return monthlyHoldings.Where((date, index) => index % interval == interval - 1 || index == monthlyHoldings.Count() - 1);
+        }
+
+        private static IEnumerable<MonthlyHolding> TakeLastHoldings(IEnumerable<MonthlyHolding> monthlyHoldings, int monthsToInclude)
+        {
+            return monthlyHoldings.TakeLast(monthsToInclude);
+        }
+
+        private async Task<List<TransactionDto>> GetUserTransactionsOrderedAsync(string userId)
+        {
+            var transactions = await GetUserTransactionsDtoAsync(userId);
+            return [.. transactions.OrderBy(t => t.TransactionDate)];
+        }
+
+        private static (DateTime startMonth, DateTime endMonth) GetFirstAndLastTransactionDate(List<TransactionDto> transactions)
+        {
+            var firstTransactionDate = transactions.First().TransactionDate;
+            var startMonth = new DateTime(firstTransactionDate.Year, firstTransactionDate.Month, 1);
+            var endMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            return (startMonth, endMonth);
+        }
+
+        private static Dictionary<DateTime, List<TransactionDto>> GroupTransactionsByMonth(List<TransactionDto> transactions)
+        {
+            return transactions.GroupBy(t => new DateTime(t.TransactionDate.Year, t.TransactionDate.Month, 1))
+                               .ToDictionary(g => g.Key, g => g.OrderBy(t => t.TransactionDate).ToList());
+        }
+
+        private static IEnumerable<MonthlyHolding> CalculateOrderedMonthlyHoldings(DateTime startMonth, DateTime endMonth, Dictionary<DateTime, List<TransactionDto>> monthlyTransactions)
+        {
+            List<MonthlyHolding> monthlyHoldings = [];
+            var currentHoldings = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+            for (var monthStart = startMonth; monthStart <= endMonth; monthStart = monthStart.AddMonths(1))
+            {
+                var monthEnd = new DateTime(monthStart.Year, monthStart.Month, DateTime.DaysInMonth(monthStart.Year, monthStart.Month));
+
+                if (monthlyTransactions.TryGetValue(monthStart, out var transactions))
+                {
+                    foreach (var transaction in transactions)
+                    {
+                        UpdateHoldings(currentHoldings, transaction.IsBuy, transaction.AssetIsinCode, transaction.Quantity);
+                    }
+                }
+
+                monthlyHoldings.Add(new MonthlyHolding 
+                { 
+                    MonthEnd = monthEnd,
+                    Holdings = new Dictionary<string, decimal>(currentHoldings, StringComparer.OrdinalIgnoreCase) 
+                });
+            }
+            return monthlyHoldings.OrderBy(mh => mh.MonthEnd);
+        }
+
+        private async Task<IReadOnlyList<AssetMonthlyPrice>> FetchAssetPricesAsync(IEnumerable<MonthlyHolding> monthlyHoldings)
+        {
+            var request = new AssetMonthlyPriceRequest
+            {
+                AssetsIsinCode = monthlyHoldings.Select(mh => mh.Holdings.Keys.ToArray()).ToArray(),
+                Dates = monthlyHoldings.Select(mh => mh.MonthEnd).ToArray()
+            };
+
+            return await _assetMonthlyPriceService.GetAssetMonthlyPricesAsync(request);
+        }
+
+        /// <summary>
+        /// Builds a list of monthly heritage records based on asset holdings and their corresponding prices.
+        /// </summary>
+        /// <param name="monthlyHoldings">A list of month-end dates with associated asset holdings.</param>
+        /// <param name="prices">A list of asset prices grouped by year and month.</param>
+        /// <returns>A list of <see cref="MonthlyHeritageRecord"/> representing the heritage evolution.</returns>
+        private static IEnumerable<MonthlyHeritageRecord> BuildMonthlyHeritageRecords(
+            IEnumerable<MonthlyHolding> monthlyHoldings,
+            IReadOnlyList<AssetMonthlyPrice> prices)
+        {
+            var priceDictionary = GroupPricesByYearAndMonth(prices);
+            return monthlyHoldings.Select(holding => CreateMonthlyHeritageRecord(holding, priceDictionary));
+        }
+
+        /// <summary>
+        /// Groups asset prices by year and month for efficient lookup.
+        /// </summary>
+        private static Dictionary<(int Year, int Month), List<AssetMonthlyPrice>> GroupPricesByYearAndMonth(
+            IReadOnlyList<AssetMonthlyPrice> prices)
+        {
+            return prices
+                .GroupBy(price => (price.Year, price.Month))
+                .ToDictionary(group => group.Key, group => group.ToList());
+        }
+
+        /// <summary>
+        /// Creates a heritage record for a specific month-end based on holdings and available prices.
+        /// </summary>
+        private static MonthlyHeritageRecord CreateMonthlyHeritageRecord(
+            MonthlyHolding holding,
+            Dictionary<(int Year, int Month), List<AssetMonthlyPrice>> priceDictionary)
+        {
+            var key = (holding.MonthEnd.Year, holding.MonthEnd.Month);
+
+            var monthlyPrices = priceDictionary.GetValueOrDefault(key, []);
+            var totalHeritage = CalculateTotalHeritage(holding.Holdings, monthlyPrices);
+            var assetValues = CreateAssetValuesDictionary(monthlyPrices);
+
+            return new MonthlyHeritageRecord(
+                monthEnd: holding.MonthEnd,
+                totalHeritage: totalHeritage,
+                assetValues: new ReadOnlyDictionary<string, decimal>(assetValues)
+            );
+        }
+
+        /// <summary>
+        /// Calculates the total heritage value for the given holdings and asset prices.
+        /// </summary>
+        private static decimal CalculateTotalHeritage(
+            Dictionary<string, decimal> holdings,
+            List<AssetMonthlyPrice> prices)
+        {
+            return prices.Sum(price =>
+            {
+                var quantity = holdings.GetValueOrDefault(price.AssetIsinCode, 0);
+                return price.Price * quantity;
+            });
+        }
+
+        /// <summary>
+        /// Creates a dictionary mapping asset ISIN codes to their respective prices.
+        /// </summary>
+        private static Dictionary<string, decimal> CreateAssetValuesDictionary(
+            List<AssetMonthlyPrice> prices)
+        {
+            return prices.ToDictionary(price => price.AssetIsinCode, price => price.Price);
+        }
+
 
         private static void UpdateHoldings(Dictionary<string, decimal> holdings, bool isBuy, string isin, decimal quantity)
         {

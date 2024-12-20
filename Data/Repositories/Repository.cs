@@ -2,6 +2,7 @@
 using InvestmentManager.Data.Repositories.Interfaces;
 using InvestmentManager.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Z.EntityFramework.Plus;
 
 namespace PortofolioManager.Infrastructure.Repositories
 {
@@ -34,6 +35,11 @@ namespace PortofolioManager.Infrastructure.Repositories
         public void Add(TEntity entity)
         {
             _dbSet.Add(entity);
+        }
+
+        public void AddRange(List<TEntity> entities)
+        {
+            _dbSet.AddRange(entities);
         }
 
         public void Update(TEntity entity)
