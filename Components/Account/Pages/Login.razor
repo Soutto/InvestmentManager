@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using InvestmentManager.Shared.Models
+@using System.Diagnostics
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Login> Logger
@@ -116,9 +117,13 @@
 
 	public async Task LoginUser()
 	{
+		Stopwatch stopwatch = new Stopwatch();//TODO REMOVER ESSE STOPWATCH QUANDO TERMINAR DE VERO TEMPO
+		stopwatch.Start();
 		// This doesn't count login failures towards account lockout
 		// To enable password failures to trigger account lockout, set lockoutOnFailure: true
 		var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+		stopwatch.Stop();
+		Console.WriteLine($"Login in {stopwatch.ElapsedMilliseconds} ms.");
 		if (result.Succeeded)
 		{
 			RedirectManager.RedirectTo("portfolio");
@@ -138,6 +143,7 @@
 		{
 			errorMessage = "Error: Invalid login attempt.";
 		}
+
 	}
 
 	private sealed class InputModel

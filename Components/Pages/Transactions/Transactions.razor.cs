@@ -34,7 +34,7 @@ namespace InvestmentManager.Components.Pages.Transactions
         private bool isAddFormVisible = false;
         private MudForm? quickAddForm;
         private readonly string SnackBarKey = "SnackBarKey";
-        private string? UserId;
+        private string? userId;
         private List<Asset> assets = [];
         private List<string> assetTickers = [];
 
@@ -44,14 +44,14 @@ namespace InvestmentManager.Components.Pages.Transactions
         #region Initialization and Data Loading
         
         private async Task LoadAssetsAsync() => assets = await _assetService.GetAllAsync();
-        private async Task LoadTransactionsAsync() => transactions = await _transactionService.GetUserTransactionsAsync(UserId!);
+        private async Task LoadTransactionsAsync() => transactions = await _transactionService.GetUserTransactionsAsync(userId!);
         private async Task LoadAssetsTickersAsync() => assetTickers = await _assetService.GetAllAssetsTickersAsync();
 
         protected override async Task OnInitializedAsync()
         {
-            UserId = await GetUserIdAsync();
+            userId = await GetUserIdAsync();
 
-            if (string.IsNullOrEmpty(UserId))
+            if (string.IsNullOrEmpty(userId))
             {
                 throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
             }
@@ -96,7 +96,7 @@ namespace InvestmentManager.Components.Pages.Transactions
 
         private async Task PopulateTransactionDetailsAsync()
         {
-            newTransaction.UserId = UserId;
+            newTransaction.UserId = userId;
             newTransaction.CreateDate = DateTime.Now;
             newTransaction.TransactionDate = DateTime.Parse(newTransactionDate);
             newTransaction.Asset = await _assetService.GetByIdAsync(newTransaction.AssetIsinCode);

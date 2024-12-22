@@ -59,7 +59,12 @@
 
 					<!-- Footer Navigation -->
 					<div class="footer-links">
-						<MudLink Href="/contato" Class="footer-link">Contato</MudLink>
+						<MudLink Href="https://www.instagram.com/envistus_oficial" Target="_blank" Rel="noopener noreferrer" Class="social-icon">
+							<MudIcon Icon="@Icons.Custom.Brands.Instagram" Color="Color.Primary" />
+						</MudLink>
+						<MudLink Href="https://x.com/envistus" Target="_blank" Rel="noopener noreferrer" Class="social-icon">
+							<MudIcon Icon="@Icons.Custom.Brands.Twitter" Color="Color.Primary" />
+						</MudLink>
 						<MudLink Href="/sobre" Class="footer-link">Sobre</MudLink>
 						<MudLink Href="/account/privacypolicy" Class="footer-link">Política de Privacidade</MudLink>
 						<MudLink Href="/account/termsofuse" Class="footer-link">Termos de Uso</MudLink>
@@ -178,15 +183,22 @@
 			text-decoration: underline;
 		}
 
-	.footer-help {
-		max-width: 600px;
-		text-align: center; /* Ensures proper alignment */
-		margin-bottom: 1.5rem;
+	.footer-social {
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
 	}
 
-	.footer-title {
-		margin-bottom: 0.5rem;
+	.social-icon {
+		font-size: 1.5rem;
+		color: white;
+		transition: transform 0.3s ease, color 0.3s ease;
 	}
+
+		.social-icon:hover {
+			transform: scale(1.2);
+			color: #29b6f6; /* Light blue for hover effect */
+		}
 
 	.footer-copy {
 		margin-top: 1rem;

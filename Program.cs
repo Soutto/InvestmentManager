@@ -17,6 +17,7 @@ using InvestmentManager.Shared.Models;
 using DadosDeMercadoClient.Interfaces;
 using DadosDeMercadoClient.Clients;
 using StackExchange.Redis;
+using ApexCharts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,7 @@ builder.Services.AddMudServices();
 builder.Services.AddMudTranslations();
 builder.Services.AddTransient<MudLocalizer, CustomMudBlazorLocalizer>();
 builder.Services.AddMudExtensions();
+builder.Services.AddApexCharts();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

@@ -1,7 +1,31 @@
-﻿<h3>Portfolio</h3>
+﻿@using ApexCharts
+@using InvestmentManager.Shared.Models.Application
 
 @page "/portfolio"
 
-@code {
-
+@if (heritageEvolution is null || heritageEvolution.Records.Count == 0)
+{
+    <MudProgressLinear Color="MudBlazor.Color.Primary" Indeterminate="true" Class="my-7" />
 }
+else
+{
+    <MudPaper Style="background-color:#F5F5F5;" MaxWidth="1000px" MaxHeight="800px">
+        <ApexChart TItem="DataItem"
+                   Title="Evolução Patrimônio">
+            <ApexPointSeries TItem="DataItem"
+                             Items="dataItems"
+                             Name="Valor total (R$)"
+                             SeriesType="SeriesType.Line"
+                             XValue="e => e.Date"
+                             YValue="e=> e.Revenue" />
+            <ApexPointSeries TItem="DataItem"
+                             Items="dataItems"
+                             Name="Valor total (R$)"
+                             SeriesType="SeriesType.Line"
+                             XValue="e => e.Date"
+                             YValue="e=> e.Revenue" />
+        </ApexChart>
+    </MudPaper>
+}
+
+
