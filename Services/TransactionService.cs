@@ -216,6 +216,32 @@ namespace InvestmentManager.Services
             return new MonthlyHeritageEvolution(records);
         }
 
+        public async Task<MonthlyInvestmentEvolution> GetMonthlyInvestmentEvolutionAsync(string? userId, int monthsToInclude)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(userId);
+            ValidateMonthsToInclude(monthsToInclude);
+
+            var transactions = await GetUserTransactionsOrderedAsync(userId);
+            if (transactions.Count == 0)
+            {
+                return new MonthlyInvestmentEvolution([]);
+            }
+
+            var monthlyTransactions = GroupTransactionsByMonth(transactions);
+            var buysTransactions = transactions.Where(t => t.IsBuy).OrderBy(t => t.TransactionDate).ToList();
+
+            var buysTransactionsDictionary = GroupSellsTransactionsByAsset(buysTransactions);
+
+            var (startMonth, endMonth) = GetFirstAndLastTransactionDate(transactions);
+
+            var monthlyInvestments = CalculateOrderedMonthlyInvestments(startMonth, endMonth, monthlyTransactions, buysTransactionsDictionary);
+            var lastInvestments = TakeLastInvestments(monthlyInvestments, monthsToInclude);
+            var intervalInvestments = TakeIntervalInvestments(lastInvestments);
+
+
+            return new MonthlyInvestmentEvolution(intervalInvestments);
+        }
+
         #region Private Methods
 
         private static void ValidateMonthsToInclude(int monthsToInclude)
@@ -253,11 +279,23 @@ namespace InvestmentManager.Services
             return monthlyHoldings.Where((date, index) => index % interval == interval - 1 || index == monthlyHoldings.Count() - 1);
         }
 
+        public static IEnumerable<MonthlyInvestment> TakeIntervalInvestments(IEnumerable<MonthlyInvestment> monthlyInvestments)
+        {
+            if (monthlyInvestments.Count() <= 12) return monthlyInvestments;
+
+            int interval = monthlyInvestments.Count() >= 60 ? 3 : 2;
+
+            return monthlyInvestments.Where((date, index) => index % interval == interval - 1 || index == monthlyInvestments.Count() - 1);
+        }
+
         private static IEnumerable<MonthlyHolding> TakeLastHoldings(IEnumerable<MonthlyHolding> monthlyHoldings, int monthsToInclude)
         {
             return monthlyHoldings.TakeLast(monthsToInclude);
         }
-
+        private static IEnumerable<MonthlyInvestment> TakeLastInvestments(IEnumerable<MonthlyInvestment> monthlyInvestments, int monthsToInclude)
+        {
+            return monthlyInvestments.TakeLast(monthsToInclude);
+        }
         private async Task<List<TransactionDto>> GetUserTransactionsOrderedAsync(string userId)
         {
             var transactions = await GetUserTransactionsDtoAsync(userId);
@@ -276,6 +314,21 @@ namespace InvestmentManager.Services
         {
             return transactions.GroupBy(t => new DateTime(t.TransactionDate.Year, t.TransactionDate.Month, 1))
                                .ToDictionary(g => g.Key, g => g.OrderBy(t => t.TransactionDate).ToList());
+        }
+
+        private static Dictionary<string, Dictionary<TransactionDto, decimal>> GroupSellsTransactionsByAsset(List<TransactionDto> transactions)
+        {
+            //TODO Pensar no cenario onde existe 2 transactions de venda no mesmo dia.
+            return transactions
+                .GroupBy(t => t.AssetIsinCode)
+                .ToDictionary(
+                    g => g.Key, 
+                    g => g.OrderBy(t => t.TransactionDate)
+                          .ToDictionary(
+                              t => t, 
+                              t => 0m   
+                          )
+                );
         }
 
         private static IEnumerable<MonthlyHolding> CalculateOrderedMonthlyHoldings(DateTime startMonth, DateTime endMonth, Dictionary<DateTime, List<TransactionDto>> monthlyTransactions)
@@ -303,6 +356,105 @@ namespace InvestmentManager.Services
             }
             return monthlyHoldings.OrderBy(mh => mh.MonthEnd);
         }
+
+        private static List<MonthlyInvestment> CalculateOrderedMonthlyInvestments(
+                DateTime startMonth,
+                DateTime endMonth,
+                Dictionary<DateTime, List<TransactionDto>> monthlyTransactions,
+                Dictionary<string, Dictionary<TransactionDto, decimal>> buyTransactions)
+        {
+            var monthlyInvestments = new List<MonthlyInvestment>();
+            var currentInvestments = new MonthlyInvestment();
+
+            for (var monthStart = startMonth; monthStart <= endMonth; monthStart = monthStart.AddMonths(1))
+            {
+                ProcessMonthlyTransactions(monthStart, monthlyTransactions, buyTransactions, currentInvestments);
+
+                var monthEnd = GetMonthEnd(monthStart);
+                currentInvestments.MonthEnd = monthEnd;
+                monthlyInvestments.Add(new MonthlyInvestment
+                {
+                    MonthEnd = monthEnd,
+                    TotalInvestment = currentInvestments.TotalInvestment
+                });
+            }
+
+            return monthlyInvestments;
+        }
+
+        private static void ProcessMonthlyTransactions(
+            DateTime monthStart,
+            Dictionary<DateTime, List<TransactionDto>> monthlyTransactions,
+            Dictionary<string, Dictionary<TransactionDto, decimal>> buyTransactions,
+            MonthlyInvestment currentInvestments)
+        {
+            if (!monthlyTransactions.TryGetValue(monthStart, out var transactions))
+                return;
+
+            foreach (var transaction in transactions)
+            {
+                if (transaction.IsBuy)
+                {
+                    HandleBuyTransaction(transaction, currentInvestments);
+                }
+                else
+                {
+                    HandleSellTransaction(transaction, buyTransactions, currentInvestments);
+                }
+            }
+        }
+
+        private static void HandleBuyTransaction(TransactionDto transaction, MonthlyInvestment currentInvestments)
+        {
+            currentInvestments.TotalInvestment += transaction.TotalValue;
+        }
+
+        private static void HandleSellTransaction(
+            TransactionDto transaction,
+            Dictionary<string, Dictionary<TransactionDto, decimal>> buyTransactions,
+            MonthlyInvestment currentInvestments)
+        {
+            if (!buyTransactions.TryGetValue(transaction.AssetIsinCode, out var transactions))
+                return;
+
+            var quantityToSell = transaction.Quantity;
+
+            foreach (var (buyTransaction, soldQuantity) in transactions.ToList())
+            {
+                quantityToSell = ProcessSellQuantity(buyTransaction, soldQuantity, transactions, quantityToSell, currentInvestments);
+
+                if (quantityToSell == 0)
+                    break;
+            }
+        }
+
+        private static decimal ProcessSellQuantity(
+            TransactionDto buyTransaction,
+            decimal soldQuantity,
+            Dictionary<TransactionDto, decimal> transactions,
+            decimal quantityToSell,
+            MonthlyInvestment currentInvestments)
+        {
+            var remainingBuyQuantity = buyTransaction.Quantity - soldQuantity;
+
+            if (remainingBuyQuantity <= 0)
+                return quantityToSell;
+
+            var unitsToSell = Math.Min(remainingBuyQuantity, quantityToSell);
+
+            var decrement = unitsToSell * buyTransaction.UnitPrice;
+            currentInvestments.TotalInvestment -= decrement;
+            transactions[buyTransaction] += unitsToSell;
+            quantityToSell -= unitsToSell;
+
+            return quantityToSell;
+        }
+
+        private static DateTime GetMonthEnd(DateTime monthStart)
+        {
+            return new DateTime(monthStart.Year, monthStart.Month, DateTime.DaysInMonth(monthStart.Year, monthStart.Month));
+        }
+
 
         private async Task<IReadOnlyList<AssetMonthlyPrice>> FetchAssetPricesAsync(IEnumerable<MonthlyHolding> monthlyHoldings)
         {

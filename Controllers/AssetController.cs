@@ -42,5 +42,11 @@ namespace InvestmentManager.Controllers
         {
             return await _transactionService.GetMonthlyHeritageEvolutionAsync("be43a447-a0c0-47d2-927d-4eb72e246478", 132);
         }
+        [HttpGet("teste4")]
+        public async Task<MonthlyInvestmentEvolution> Teste4()
+        {
+            return await _transactionService.GetMonthlyInvestmentEvolutionAsync("be43a447-a0c0-47d2-927d-4eb72e246478", 12);
+        }
+        
     }
 }

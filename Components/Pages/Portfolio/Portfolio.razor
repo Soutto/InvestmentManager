@@ -9,23 +9,30 @@
 }
 else
 {
-    <MudPaper Style="background-color:#F5F5F5;" MaxWidth="1000px" MaxHeight="800px">
-        <ApexChart TItem="DataItem"
-                   Title="Evolução Patrimônio">
-            <ApexPointSeries TItem="DataItem"
-                             Items="dataItems"
-                             Name="Valor total (R$)"
-                             SeriesType="SeriesType.Line"
-                             XValue="e => e.Date"
-                             YValue="e=> e.Revenue" />
-            <ApexPointSeries TItem="DataItem"
-                             Items="dataItems"
-                             Name="Valor total (R$)"
-                             SeriesType="SeriesType.Line"
-                             XValue="e => e.Date"
-                             YValue="e=> e.Revenue" />
-        </ApexChart>
-    </MudPaper>
+
+
+            <MudPaper Style="background-color:#F5F5F5;" MaxWidth="1100px" MaxHeight="900px" Class="pa-4">
+                    <ApexChart TItem="DataItem"
+                               Title="Evolução Patrimônio" 
+                               Height="600" 
+                               Width="1600">
+                        <ApexPointSeries TItem="DataItem"
+                                         Items="dataItems"
+                                         Name="Patrimônio total (R$)"
+                                         SeriesType="SeriesType.Line"
+                                         XValue="e => e.Date"
+                                         YValue="e=> e.Revenue" />
+                        <ApexPointSeries TItem="DataItem"
+                                         Items="dataItems2"
+                                         Name="Valor total investido (R$)"
+                                         SeriesType="SeriesType.Line"
+                                         XValue="e => e.Date"
+                                         YValue="e=> e.Revenue" />
+                    </ApexChart>
+                </MudPaper>
+
+
+
 }
 
 

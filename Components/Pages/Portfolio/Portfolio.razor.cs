@@ -16,12 +16,14 @@ namespace InvestmentManager.Components.Pages.Portfolio
         #endregion
 
         private MonthlyHeritageEvolution? heritageEvolution = new([]);
+        private MonthlyInvestmentEvolution? investmentEvolution = new([]);
         private Shared.Models.Application.Portfolio? portfolio = new();
 
         public double[]? Series = [];
         public string[]? XAxisLabels = [];
 
         List<DataItem> dataItems = [];
+        List<DataItem> dataItems2 = [];
         class DataItem
         {
             public string Date { get; set; }
@@ -29,8 +31,8 @@ namespace InvestmentManager.Components.Pages.Portfolio
         }
 
         private async Task LoadPortfolioAsync(string userId) => portfolio = await _transactionService.GetPortfolioAsync(userId);
-        private async Task LoadHeritageEvolutionAsync(string userId) => heritageEvolution = await _transactionService.GetMonthlyHeritageEvolutionAsync(userId, 12);
-
+        private async Task LoadHeritageEvolutionAsync(string userId) => heritageEvolution = await _transactionService.GetMonthlyHeritageEvolutionAsync(userId, 60);
+        private async Task LoadInvestmentsEvolutionAsync(string userId) => investmentEvolution = await _transactionService.GetMonthlyInvestmentEvolutionAsync(userId, 60);
         protected override async Task OnInitializedAsync()
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -51,13 +53,16 @@ namespace InvestmentManager.Components.Pages.Portfolio
         {
             await LoadPortfolioAsync(userId);
             await LoadHeritageEvolutionAsync(userId);
-
+            await LoadInvestmentsEvolutionAsync(userId);
 
             foreach (var record in heritageEvolution.Records)
             {
                 dataItems.Add(new DataItem { Date = record.MonthEnd.ToString("MM/yy"), Revenue = record.TotalHeritage });
             }
-            
+            foreach (var investment in investmentEvolution.Investments)
+            {
+                dataItems2.Add(new DataItem { Date = investment.MonthEnd.ToString("MM/yy"), Revenue = investment.TotalInvestment });
+            }
         }
 
         private async Task<string?> GetUserIdAsync()
@@ -65,11 +70,6 @@ namespace InvestmentManager.Components.Pages.Portfolio
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
 
             return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
-        }
-
-        private static string FormatAsUSD(object value)
-        {
-            return ((double)value).ToString("C0", CultureInfo.CreateSpecificCulture("pt-BR"));
         }
     }
 }
