@@ -126,7 +126,7 @@
 		Console.WriteLine($"Login in {stopwatch.ElapsedMilliseconds} ms.");
 		if (result.Succeeded)
 		{
-			RedirectManager.RedirectTo("portfolio");
+			RedirectManager.RedirectTo("news");
 		}
 		else if (result.RequiresTwoFactor)
 		{

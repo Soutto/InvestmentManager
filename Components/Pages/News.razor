@@ -1,0 +1,75 @@
+﻿@page "/news"
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+
+	@if (newsList == null)
+	{
+		<MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+	}
+	else
+	{
+		<MudGrid>
+			@foreach (var newsItem in PagedNewsList)
+			{
+				<MudItem xs="12" sm="6" md="4">
+					<MudCard Elevation="3" Class="news-card hover-effect d-flex flex-column" Style="height: 250px;" @onclick="(async () => await NavigateToUrlAsync(newsItem.Url))">
+						<MudCardHeader>
+							<CardHeaderContent>
+								<div class="d-flex align-center">
+									<MudAvatar Class="news-logo" Size="Size.Medium">
+										<MudImage Src="@newsItem.LogoUrl" />
+									</MudAvatar>
+									<div class="ml-3">
+										<MudText Typo="Typo.h6">@newsItem.Title</MudText>
+										<MudText Typo="Typo.subtitle2" Color="Color.Secondary">@newsItem.Source</MudText>
+									</div>
+								</div>
+							</CardHeaderContent>
+						</MudCardHeader>
+						<MudCardContent Class="flex-grow-1 d-flex flex-column justify-end">
+							<div class="mt-auto">
+								<MudText Typo="Typo.body2" Color="Color.Info" Class="font-weight-bold">@newsItem.Category</MudText>
+								<MudDivider Class="my-2" />
+								<MudText Typo="Typo.caption" Color="Color.Secondary">@newsItem.PublishedAt.ToString("dd/MM/yyyy HH'h'mm")</MudText>
+							</div>
+						</MudCardContent>
+					</MudCard>
+				</MudItem>
+			}
+		</MudGrid>
+		<MudPagination SelectedChanged="PageChanged" @bind-Page="currentPage" Count="@TotalPages" Class="mt-2" />
+	}
+</MudContainer>
+
+<style>
+	.news-card {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		background-color: #F5F5F5;
+		border-radius: 10px;
+		box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.news-card:hover {
+		transform: scale(1.03);
+		box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
+	}
+
+	.news-card .mud-card-content {
+		flex-grow: 1;
+	}
+
+	.hover-effect:hover {
+		cursor: pointer;
+	}
+
+	.news-logo {
+		margin-right: 8px;
+		border-radius: 50%; /* Circular logo */
+		background-color: #f5f5f5; /* Subtle background for better contrast */
+	}
+</style>

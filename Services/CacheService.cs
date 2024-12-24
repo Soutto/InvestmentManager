@@ -9,7 +9,7 @@ namespace InvestmentManager.Services
         private readonly IDatabase _database = connectionMultiplexer.GetDatabase();
         private readonly ILogger<CacheService> _logger = logger;
 
-        public TimeSpan DefaultExpiration() => new(0, 5, 0);
+        public TimeSpan DefaultExpiration() => new(0, 10, 0);
 
         #region Public Methods
 

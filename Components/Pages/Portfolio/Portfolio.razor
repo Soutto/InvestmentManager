@@ -3,36 +3,218 @@
 
 @page "/portfolio"
 
-@if (heritageEvolution is null || heritageEvolution.Records.Count == 0)
+@if (!IsDataLoaded)
 {
-    <MudProgressLinear Color="MudBlazor.Color.Primary" Indeterminate="true" Class="my-7" />
+	<MudPaper Class="pa-4 mt-2 ml-5" Style="background-color: #F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);" Elevation="3" Width="97%">
+		<MudGrid Spacing="3" AlignItems="Center">
+			<MudItem xs="12" sm="6" md="4">
+				<div class="pa-4">
+					<MudSkeleton SkeletonType="SkeletonType.Text" Height="30px" Width="70%" />
+					<MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+				</div>
+			</MudItem>
+			<MudItem xs="12" sm="6" md="4">
+				<div class="pa-4">
+					<MudSkeleton SkeletonType="SkeletonType.Text" Height="30px" Width="70%" />
+					<MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+				</div>
+			</MudItem>
+			<MudItem xs="12" sm="6" md="4">
+				<div class="pa-4">
+					<MudSkeleton SkeletonType="SkeletonType.Text" Height="30px" Width="70%" />
+					<MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+				</div>
+			</MudItem>
+		</MudGrid>
+	</MudPaper>
+	<MudPaper Style="background-color:#F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);" Width="97%" Class="pa-4 mt-4 ml-5" Elevation="3" MaxHeight="700px">
+		<MudSkeleton SkeletonType="SkeletonType.Text" Height="30px" Width="50%" />
+		<MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="500px" />
+	</MudPaper>
+	<MudPaper Class="pa-4 mb-4 mt-4 ml-5" Style="background-color: #F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);" Elevation="3" Width="97%">
+		<MudGrid>
+			<MudItem xs="12" md="12">
+				<MudSkeleton SkeletonType="SkeletonType.Text" Height="30px" Width="100%" />
+				<MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="400px" />
+			</MudItem>
+		</MudGrid>
+	</MudPaper>
 }
 else
 {
+	<MudPaper Style="background-color:white;" MaxWidth="1650px"
+			  MaxHeight="1500px" Elevation="0">
+		<MudStack Justify="Justify.FlexStart" AlignItems="AlignItems.Center" StretchItems="StretchItems.None" Spacing="4">
+			<MudPaper Class="pa-4 mt-2"
+					  Style="background-color: #F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);"
+					  Elevation="3"
+					  Width="97%">
+				<MudGrid Spacing="3" AlignItems="Center">
+					<!-- Valor do Portfólio -->
+					<MudItem xs="12" sm="6" md="4">
+						<div class="pa-4">
+							<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Valor do Patrimônio</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@PortfolioValue.ToString("C")</MudText>
+						</div>
+					</MudItem>
 
+					<!-- Total Investido -->
+					<MudItem xs="12" sm="6" md="4">
+						<div class="pa-4">
+							<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Total Investido</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@TotalInvested.ToString("C")</MudText>
+						</div>
+					</MudItem>
 
-            <MudPaper Style="background-color:#F5F5F5;" MaxWidth="1100px" MaxHeight="900px" Class="pa-4">
-                    <ApexChart TItem="DataItem"
-                               Title="Evolução Patrimônio" 
-                               Height="600" 
-                               Width="1600">
-                        <ApexPointSeries TItem="DataItem"
-                                         Items="dataItems"
-                                         Name="Patrimônio total (R$)"
-                                         SeriesType="SeriesType.Line"
-                                         XValue="e => e.Date"
-                                         YValue="e=> e.Revenue" />
-                        <ApexPointSeries TItem="DataItem"
-                                         Items="dataItems2"
-                                         Name="Valor total investido (R$)"
-                                         SeriesType="SeriesType.Line"
-                                         XValue="e => e.Date"
-                                         YValue="e=> e.Revenue" />
-                    </ApexChart>
-                </MudPaper>
+					<!-- Lucro/Prejuízo -->
+					<MudItem xs="12" sm="6" md="4">
+						<div class="pa-4"
+							 style="background-color: @(ProfitLoss >= 0 ? "#DCEFDD" : "#FFCCD4"); border-radius: 10px; text-align: center;">
+							<MudText Typo="Typo.h6" GutterBottom="true">Lucro/Prejuízo</MudText>
+							<MudText Typo="Typo.h4" Style="font-weight: bold; " Color="@(ProfitLoss >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@ProfitLoss.ToString("C")
+							</MudText>
+							<MudText Typo="Typo.subtitle2" Color="@(ProfitLossPercentage >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@(ProfitLossPercentage >= 0 ? "+" : "")@ProfitLossPercentage.ToString("P")
+							</MudText>
+						</div>
+					</MudItem>
+				</MudGrid>
+			</MudPaper>
+			<MudPaper Style="background-color:#F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);"
+					  Width="97%"
+					  Class="pa-4"
+					  Elevation="3"
+					  MaxHeight="700px">
+				<MudText Typo="Typo.h6" Align="MudBlazor.Align.Center" GutterBottom="true">Evolução do Patrimônio</MudText>
+				<MudButtonGroup Variant="Variant.Filled" Style="background-color: #F5F5F5" DropShadow="true">
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(3))" Class="@GetButtonClass(3)">3 meses</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(6))" Class="@GetButtonClass(6)">6 meses</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(888))" Class="@GetButtonClass(888)">YTD</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(12))" Class="@GetButtonClass(12)">1 ano</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(60))" Class="@GetButtonClass(60)">5 anos</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync(360))" Class="@GetButtonClass(360)">MÁX.</MudButton>
+				</MudButtonGroup>
+				<div style="height: 100%; min-height: 500px;">
+					<ApexChart TItem="DataItem"
+						@ref=chart
+							   Options="ChartOptions">
+						<ApexPointSeries TItem="DataItem"
+										 Items="dataItems"
+										 Name="Patrimônio total (R$)"
+										 SeriesType="SeriesType.Line"
+										 XValue="e => e.Date"
+										 YValue="e=> e.Revenue" />
+						<ApexPointSeries TItem="DataItem"
+										 Items="dataItems2"
+										 Name="Valor total investido (R$)"
+										 SeriesType="SeriesType.Line"
+										 XValue="e => e.Date"
+										 YValue="e=> e.Revenue" />
+					</ApexChart>
+				</div>
 
+			</MudPaper>
+			@* Asset Allocation and Asset Performance *@
+			<MudPaper Class="pa-4 mb-4" Style="background-color: #F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);" Elevation="3" Width="97%">
+				<MudGrid>
+					<MudItem xs="12" md="12">
+						<MudText Typo="Typo.h6" Align="MudBlazor.Align.Center" GutterBottom="true">Desempenho dos Ativos</MudText>
+						<MudTable Elevation="0"
+								  Items="@portfolio.PortfolioAssets"
+								  Hover="true"
+								  Dense="true"
+								  Style="border-radius: 10px; background-color: #F5F5F5;"
+								  Height="400px"
+								  Striped="true"
+								  SortLabel="Sort By">
+							<HeaderContent>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Código</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Preço</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Quantidade</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Preço Médio</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<PortfolioAsset, object>(x => x.CurrentTotalValue)">
+										<span class="table-header">Valor Atual</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Lucro/Prejuízo</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Variação %</span>
+									</MudTableSortLabel>
+								</MudTh>
+								<MudTh>
+									<MudTableSortLabel SortBy="new Func<PortfolioAsset, object>(x => x.Asset.Ticker)">
+										<span class="table-header">Alocação %</span>
+									</MudTableSortLabel>
+								</MudTh>
+							</HeaderContent>
+							<RowTemplate>
+								<MudTd DataLabel="Asset">
+									<div style="display: flex; align-items: center;">
+										<MudImage Src="https://s3-symbol-logo.tradingview.com/b3-on-nm--big.svg" Width="32" Height="32" Alt="@context.Asset.Ticker" Style="margin-right: 8px;" />
+										<MudText Typo="Typo.body1" Style="font-weight: bold;">@context.Asset.Ticker</MudText>
+									</div>
+								</MudTd>
+								<MudTd DataLabel="Price">@context.Asset.CurrentPrice.ToString("C")</MudTd>
+								<MudTd DataLabel="Qty">@context.Quantity.ToString("N")</MudTd>
+								<MudTd DataLabel="Avg. Price">@context.AveragePrice.ToString("C")</MudTd>
+								<MudTd DataLabel="Current Value">@context.CurrentTotalValue.ToString("C")</MudTd>
+								<MudTd DataLabel="Profit/Loss" Style="@GetProfitLossColor(context.MonetaryPerformance)">
+									@context.MonetaryPerformance.ToString("C")
+								</MudTd>
+								<MudTd DataLabel="Change %">
+									<MudText Color="@(context.PriceChangePercentage > 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+										@(context.PriceChangePercentage > 0 ? "+" : "")@context.PriceChangePercentage.ToString("P")
+									</MudText>
+								</MudTd>
+								<MudTd DataLabel="Allocation %">@((context.CurrentTotalValue / portfolio.TotalCurrentValue).ToString("P"))</MudTd>
+							</RowTemplate>
+						</MudTable>
+					</MudItem>
 
-
+				</MudGrid>
+			</MudPaper>
+		</MudStack>
+	</MudPaper>
 }
 
+<style>
+	.table-header {
+		font-weight: bold;
+		font-size: 14px;
+		color: #37474F;
+		text-transform: uppercase;
+	}
+
+	.selected-button {
+		background: linear-gradient(135deg, #1A237E 0%, #0D47A1 100%) !important;
+		color: white !important;
+	}
+
+	.not-selected-button {
+		background-color: #F5F5F5; 
+	}
+</style>
 

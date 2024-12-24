@@ -56,6 +56,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddHttpClient<IAssetClient, AssetClient>();
+builder.Services.AddHttpClient<INewsClient, NewsClient>();
 builder.Services.AddControllers();
 
 #region Repositories
@@ -68,6 +69,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAssetService, AssetService>();
 builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<IAssetMonthlyPriceService, AssetMonthlyPriceService>();
+builder.Services.AddScoped<INewsService, NewsService>();
 
 #endregion
 
