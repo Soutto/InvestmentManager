@@ -25,7 +25,7 @@ namespace InvestmentManager.Services
             else
             {
                 var freshValue = await getFromSource();
-                await SetAsync(key, freshValue);
+                await SetAsync(key, freshValue, expiration);
                 return freshValue;
             }
         }

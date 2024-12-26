@@ -12,108 +12,163 @@ namespace InvestmentManager.Components.Pages.Portfolio
     public partial class Portfolio : ComponentBase
     {
         #region Dependencies (Injected Services)
-        [Inject] private ITransactionService _transactionService { get; set; } = default!;
-        [Inject] private AuthenticationStateProvider _authStateProvider { get; set; } = default!;
+        [Inject] private ITransactionService TransactionService { get; set; } = default!;
+        [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
         #endregion
-        public bool IsDataLoaded { get; set; } = false;
-        public decimal PortfolioValue { get; set; } = 158452.85m;
-        public decimal TotalInvested { get; set; } = 140000.00m;
+
+        #region Public Properties
+        public bool IsDataLoaded { get; private set; }
+        public decimal PortfolioValue { get; private set; } = 158452.85m;
+        public decimal TotalInvested { get; private set; } = 140000.00m;
         public decimal ProfitLoss => PortfolioValue - TotalInvested;
-        public decimal ProfitLossPercentage => (TotalInvested != 0) ? (ProfitLoss / TotalInvested) : 0;
+        public decimal ProfitLossPercentage => TotalInvested != 0 ? ProfitLoss / TotalInvested : 0;
+        #endregion
 
-        public double[] allocationData = [];
-        public string[] allocationLabels = [];
+        #region Private Fields
+        private string _currentMonthsText = "3 meses";
+        private int _currentMonths = 3;
+        private string? _userId = string.Empty;
+        private MonthlyHeritageEvolution? _heritageEvolution = new([]);
+        private MonthlyInvestmentEvolution? _investmentEvolution = new([]);
+        private Shared.Models.Application.Portfolio _portfolio = new();
+        private readonly List<DataItem> _heritageDataItems = [];
+        private readonly List<DataItem> _investmentDataItems = [];
+        private readonly ApexChartOptions<DataItem> _chartOptions = new();
+        private ApexChart<DataItem> _chart = new();
+        #endregion
 
-        // Reference to the Pie Chart
-        MudChart pieChart = new();
-
-        private MonthlyHeritageEvolution? heritageEvolution = new([]);
-        private MonthlyInvestmentEvolution? investmentEvolution = new([]);
-        private Shared.Models.Application.Portfolio? portfolio = new();
-        private ApexChartOptions<DataItem> ChartOptions = new();
-        private ApexChart<DataItem> chart = new();
-        private int currentMonths = 3; // Default to 1 month
-        public double[]? Series = [];
-        public string[]? XAxisLabels = [];
-        string UserId = string.Empty;
-        List<DataItem> dataItems = [];
-        List<DataItem> dataItems2 = [];
-        private string selectedPeriod = "3m";
-
-        class DataItem
+        #region Inner Classes
+        private class DataItem
         {
-            public string Date { get; set; }
+            public string Date { get; set; } = string.Empty;
             public decimal Revenue { get; set; }
         }
+        #endregion
 
-        private async Task LoadPortfolioAsync(string userId) => portfolio = await _transactionService.GetPortfolioAsync(userId);
-        private async Task LoadHeritageEvolutionAsync(string userId, int months) => heritageEvolution = await _transactionService.GetMonthlyHeritageEvolutionAsync(userId, months);
-        private async Task LoadInvestmentsEvolutionAsync(string userId, int months) => investmentEvolution = await _transactionService.GetMonthlyInvestmentEvolutionAsync(userId, months);
+        #region Lifecycle Methods
         protected override async Task OnInitializedAsync()
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            UserId = await GetUserIdAsync();
+            var stopwatch = Stopwatch.StartNew();
 
-            if (string.IsNullOrEmpty(UserId))
+            _userId = await GetUserIdAsync();
+            if (string.IsNullOrEmpty(_userId))
             {
                 throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
             }
-            ChartOptions.Chart.Width = "100%";
-            ChartOptions.Chart.Height = "100%";
 
-            await LoadDataAsync(UserId);
+            ConfigureChartOptions();
+            await LoadInitialDataAsync();
+
             stopwatch.Stop();
             Console.WriteLine($"Portfolio page loaded in {stopwatch.ElapsedMilliseconds} ms.");
             IsDataLoaded = true;
         }
-        private string GetButtonClass(int months)
+        #endregion
+
+        #region Public Methods
+        public string GetButtonClass(string period) =>
+            _currentMonthsText.Equals(period, StringComparison.OrdinalIgnoreCase) ? "selected-button" : "not-selected-button";
+
+        public string GetProfitLossColor(decimal value) =>
+            value >= 0 ? "color: green;" : "color: red;";
+        #endregion
+
+        #region Private Methods
+        private void ConfigureChartOptions()
         {
-            return currentMonths == months ? "selected-button" : "not-selected-button";
+            _chartOptions.Chart.Width = "100%";
+            _chartOptions.Chart.Height = "100%";
         }
-        private async Task LoadChartDataAsync(int months)
+
+        private async Task LoadInitialDataAsync()
         {
-            currentMonths = months;
-            await LoadHeritageEvolutionAsync(UserId, currentMonths);
-            await LoadInvestmentsEvolutionAsync(UserId, currentMonths);
-            dataItems.Clear();
-            dataItems2.Clear();
-            foreach (var record in heritageEvolution.Records)
-            {
-                dataItems.Add(new DataItem { Date = record.MonthEnd.ToString("MM/yy"), Revenue = record.TotalHeritage });
-            }
-            foreach (var investment in investmentEvolution.Investments)
-            {
-                dataItems2.Add(new DataItem { Date = investment.MonthEnd.ToString("MM/yy"), Revenue = investment.TotalInvestment });
-            }
-            await chart.RenderAsync();
+            await LoadPortfolioAsync();
+            await LoadHeritageEvolutionAsync();
+            await LoadInvestmentEvolutionAsync();
+            PrepareChartData();
         }
-        private async Task LoadDataAsync(string userId)
+
+        private async Task LoadPortfolioAsync()
         {
-            
-            await LoadPortfolioAsync(userId);
-            await LoadHeritageEvolutionAsync(userId, currentMonths);
-            await LoadInvestmentsEvolutionAsync(userId, currentMonths);
-            allocationData = portfolio.PortfolioAssets.Select(a => (double)a.CurrentTotalValue).ToArray();
-            allocationLabels = portfolio.PortfolioAssets.Select(a => a.Asset.Ticker).ToArray();
-            foreach (var record in heritageEvolution.Records)
-            {
-                dataItems.Add(new DataItem { Date = record.MonthEnd.ToString("MM/yy"), Revenue = record.TotalHeritage });
-            }
-            foreach (var investment in investmentEvolution.Investments)
-            {
-                dataItems2.Add(new DataItem { Date = investment.MonthEnd.ToString("MM/yy"), Revenue = investment.TotalInvestment });
-            }
+            _portfolio = await TransactionService.GetPortfolioAsync(_userId);
         }
-        private string GetProfitLossColor(decimal value)
+
+        private async Task LoadHeritageEvolutionAsync() =>
+            _heritageEvolution = await TransactionService.GetMonthlyHeritageEvolutionAsync(_userId, _currentMonths);
+
+        private async Task LoadInvestmentEvolutionAsync() =>
+            _investmentEvolution = await TransactionService.GetMonthlyInvestmentEvolutionAsync(_userId, _currentMonths);
+
+        private void PrepareChartData()
         {
-            return value >= 0 ? "color: green;" : "color: red;";
+            _heritageDataItems.Clear();
+            _investmentDataItems.Clear();
+
+            if (_heritageEvolution?.Records != null && _heritageEvolution?.Records.Count > 0)
+            {
+                _heritageDataItems.AddRange(_heritageEvolution.Records.Select(record =>
+                    new DataItem
+                    {
+                        Date = record.MonthEnd.ToString("MM/yy"),
+                        Revenue = record.TotalHeritage
+                    }));
+            }
+
+            if (_investmentEvolution?.Investments != null && _investmentEvolution?.Investments.Count > 0)
+            {
+                _investmentDataItems.AddRange(_investmentEvolution.Investments.Select(investment =>
+                    new DataItem
+                    {
+                        Date = investment.MonthEnd.ToString("MM/yy"),
+                        Revenue = investment.TotalInvestment
+                    }));
+            }
         }
+
+        private async Task LoadChartDataAsync(string period)
+        {
+            int months = GetMonthsPeriod(period);
+
+            if (months != _currentMonths)
+            {
+                _currentMonths = months;
+                await LoadHeritageEvolutionAsync();
+                await LoadInvestmentEvolutionAsync();
+                PrepareChartData();
+            }
+
+            _currentMonthsText = period;
+            await _chart.RenderAsync();
+        }
+
+        private static int GetMonthsPeriod(string period)
+        {
+            return period switch
+            {
+                _ when string.Equals(period, "3 meses", StringComparison.OrdinalIgnoreCase) => 3,
+                _ when string.Equals(period, "6 meses", StringComparison.OrdinalIgnoreCase) => 6,
+                _ when string.Equals(period, "YTD", StringComparison.OrdinalIgnoreCase) => GetMonthsSinceStartOfYear(),
+                _ when string.Equals(period, "1 ano", StringComparison.OrdinalIgnoreCase) => 12,
+                _ when string.Equals(period, "5 anos", StringComparison.OrdinalIgnoreCase) => 60,
+                _ when string.Equals(period, "MÁX", StringComparison.OrdinalIgnoreCase) => 360,
+                _ => 3
+            };
+        }
+
         private async Task<string?> GetUserIdAsync()
         {
-            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+            return user.Identity?.IsAuthenticated == true
+                ? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                : null;
         }
+        private static int GetMonthsSinceStartOfYear()
+        {
+            var currentDate = DateTime.Now;
+            return currentDate.Month;
+        }
+        #endregion
     }
 }

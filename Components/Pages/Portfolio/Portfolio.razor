@@ -60,8 +60,17 @@ else
 
 					<!-- Total Investido -->
 					<MudItem xs="12" sm="6" md="4">
-						<div class="pa-4">
-							<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Total Investido</MudText>
+						<div class="pa-4" style="text-align: center;">
+							<MudTooltip>
+								<ChildContent>
+									<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Total Investido</MudText>
+								</ChildContent>
+								<TooltipContent>
+									<MudText Typo="Typo.h6">Valor Total Investido:</MudText>
+									<MudText Typo="Typo.body2">Calculado com base no método FIFO (Primeiro a Entrar, Primeiro a Sair).<br>O valor considera o custo das ações compradas e subtrai o custo das ações vendidas, começando pelas primeiras aquisições.<br>Assim, reflete o investimento ainda alocado nos ativos atuais.</MudText>
+									<MudIcon Icon="@Icons.Material.Filled.Star" />
+								</TooltipContent>
+							</MudTooltip>
 							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@TotalInvested.ToString("C")</MudText>
 						</div>
 					</MudItem>
@@ -88,25 +97,25 @@ else
 					  MaxHeight="700px">
 				<MudText Typo="Typo.h6" Align="MudBlazor.Align.Center" GutterBottom="true">Evolução do Patrimônio</MudText>
 				<MudButtonGroup Variant="Variant.Filled" Style="background-color: #F5F5F5" DropShadow="true">
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(3))" Class="@GetButtonClass(3)">3 meses</MudButton>
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(6))" Class="@GetButtonClass(6)">6 meses</MudButton>
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(888))" Class="@GetButtonClass(888)">YTD</MudButton>
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(12))" Class="@GetButtonClass(12)">1 ano</MudButton>
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(60))" Class="@GetButtonClass(60)">5 anos</MudButton>
-					<MudButton OnClick="@(async () => await LoadChartDataAsync(360))" Class="@GetButtonClass(360)">MÁX.</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("3 meses"))" Class="@GetButtonClass("3 meses")">3 meses</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("6 meses"))" Class="@GetButtonClass("6 meses")">6 meses</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("YTD"))" Class="@GetButtonClass("YTD")">YTD</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("1 ano"))" Class="@GetButtonClass("1 ano")">1 ano</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("5 anos"))" Class="@GetButtonClass("5 anos")">5 anos</MudButton>
+					<MudButton OnClick="@(async () => await LoadChartDataAsync("MÁX"))" Class="@GetButtonClass("MÁX")">MÁX.</MudButton>
 				</MudButtonGroup>
 				<div style="height: 100%; min-height: 500px;">
 					<ApexChart TItem="DataItem"
-						@ref=chart
-							   Options="ChartOptions">
+							   @ref=_chart
+							   Options="_chartOptions">
 						<ApexPointSeries TItem="DataItem"
-										 Items="dataItems"
+										 Items="_heritageDataItems"
 										 Name="Patrimônio total (R$)"
 										 SeriesType="SeriesType.Line"
 										 XValue="e => e.Date"
 										 YValue="e=> e.Revenue" />
 						<ApexPointSeries TItem="DataItem"
-										 Items="dataItems2"
+										 Items="_investmentDataItems"
 										 Name="Valor total investido (R$)"
 										 SeriesType="SeriesType.Line"
 										 XValue="e => e.Date"
@@ -121,7 +130,7 @@ else
 					<MudItem xs="12" md="12">
 						<MudText Typo="Typo.h6" Align="MudBlazor.Align.Center" GutterBottom="true">Desempenho dos Ativos</MudText>
 						<MudTable Elevation="0"
-								  Items="@portfolio.PortfolioAssets"
+								  Items="@_portfolio.PortfolioAssets"
 								  Hover="true"
 								  Dense="true"
 								  Style="border-radius: 10px; background-color: #F5F5F5;"
@@ -189,7 +198,7 @@ else
 										@(context.PriceChangePercentage > 0 ? "+" : "")@context.PriceChangePercentage.ToString("P")
 									</MudText>
 								</MudTd>
-								<MudTd DataLabel="Allocation %">@((context.CurrentTotalValue / portfolio.TotalCurrentValue).ToString("P"))</MudTd>
+								<MudTd DataLabel="Allocation %">@((context.CurrentTotalValue / _portfolio.TotalCurrentValue).ToString("P"))</MudTd>
 							</RowTemplate>
 						</MudTable>
 					</MudItem>
@@ -214,7 +223,7 @@ else
 	}
 
 	.not-selected-button {
-		background-color: #F5F5F5; 
+		background-color: #F5F5F5;
 	}
 </style>
 
