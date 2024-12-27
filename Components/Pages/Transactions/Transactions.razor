@@ -14,104 +14,13 @@
 
 <PageTitle>Transações</PageTitle>
 
-<!-- Novo formulário de adição rápida em uma linha horizontal -->
 <MudButton Variant="Variant.Filled"
 		   Style="background-color: #1976D2; color: white;"
-		   OnClick="ToggleAddForm"
-		   StartIcon="@(isAddFormVisible ? Icons.Material.Filled.Close : Icons.Material.Filled.Add)"
+		   OnClick="OpenAddTransactionsDialogAsync"
+		   StartIcon="@Icons.Material.Filled.Add"
 		   Class="mb-2 p-4"
 		   Elevation="1">
 </MudButton>
-<MudCollapse @bind-Expanded="isAddFormVisible">
-	<MudPaper Class="mb-4 p-4"
-			  Elevation="1">
-		<MudForm Model="@newTransaction"
-				 @ref="quickAddForm"
-				 OnValidSubmit="AddTransaction">
-			<MudCardContent Class="pa-0">
-				<MudTable Items="new List<Transaction> {newTransaction}" Hover="true" Breakpoint="Breakpoint.None" Dense="true" Elevation="0" Style="background-color: #F5F5F5;">
-					<HeaderContent>
-						<MudTh Class="table-header" Style="width: 180px;">Código</MudTh>
-						<MudTh Class="table-header">Tipo</MudTh>
-						<MudTh Class="table-header">Compra/Venda</MudTh>
-						<MudTh Class="table-header">Quantidade</MudTh>
-						<MudTh Class="table-header">Preço</MudTh>
-						<MudTh Class="table-header">Outros Custos</MudTh>
-						<MudTh Class="table-header">Data</MudTh>
-						<MudTh></MudTh>
-					</HeaderContent>
-					<RowTemplate>
-						<!-- Ticker -->
-						<MudTd DataLabel="Código">
-							<MudSelectExtended ItemCollection="assetTickers"
-											   SearchBox="true"
-											   SearchBoxAutoFocus="true"
-											   SearchFunc="@(new Func<string, string, bool>(SearchItems))"
-											   ValueChanged="OnTickerValueChanged"
-											   T="string"
-											   Virtualize="true"
-											   AnchorOrigin="Origin.BottomCenter"
-											   Variant="Variant.Text" />
-						</MudTd>
-
-						<!-- Asset Type -->
-						<MudTd DataLabel="Tipo">
-							<MudSelect T="AssetType" @bind-Value="newTransaction.Asset.Type" Required="true" Disabled="true">
-								@foreach (var variant in Enum.GetValues<AssetType>())
-								{
-									<MudSelectItem Value="@variant">@GetAssetTypeDescription(variant)</MudSelectItem>
-								}
-							</MudSelect>
-						</MudTd>
-
-						<!-- Compra/Venda -->
-						<MudTd DataLabel="Compra/Venda">
-							<MudSelect T="bool" @bind-Value="newTransaction.IsBuy" Required="true">
-								<MudSelectItem Value="true">Compra</MudSelectItem>
-								<MudSelectItem Value="false">Venda</MudSelectItem>
-							</MudSelect>
-						</MudTd>
-						<!-- Quantidade -->
-						<MudTd DataLabel="Quantidade">
-							<MudNumericField T="decimal" @bind-Value="newTransaction.Quantity" Required="true" Min="0.00000001m" />
-						</MudTd>
-						<!-- Preço (R$) -->
-						<MudTd DataLabel="Preço">
-							<MudNumericField T="decimal" @bind-Value="newTransaction.UnitPrice" Required="true" Min="0.00000001m"
-											 Culture="@CultureInfo.GetCultureInfo("pt-BR")" Format="C2" />
-						</MudTd>
-						<!-- Outros Custos (R$) -->
-						<MudTd DataLabel="Outros Custos">
-							<MudNumericField T="decimal"
-											 @bind-Value="newTransaction.OtherCosts"
-											 Min="0.0m"
-											 Culture="@CultureInfo.GetCultureInfo("pt-BR")"
-											 Format="C2" />
-						</MudTd>
-						<!-- Data -->
-
-						<MudTd DataLabel="Data">
-							<MudTextField @bind-Value="newTransactionDate"
-										  Required="true"
-										  Mask="@dateMask"
-										  Placeholder="dd/MM/yyyy" />
-						</MudTd>
-						<!-- Botão Adicionar -->
-						<MudTd>
-							<MudTooltip Text="Salvar nova transação.">
-								<MudButton Variant="Variant.Filled"
-										   Style="background-color: #1976D2; color: white;"
-										   StartIcon="@Icons.Material.Filled.Save"
-										   OnClick="@( async () => await AddTransactionAsync())">
-								</MudButton>
-							</MudTooltip>
-						</MudTd>
-					</RowTemplate>
-				</MudTable>
-			</MudCardContent>
-		</MudForm>
-	</MudPaper>
-</MudCollapse>
 <MudPaper Style="background-color:white; " MaxWidth="1650px" MaxHeight="1500px" Elevation="0">
 	<MudPaper Class="pa-4 ml-5"
 			  Style="background-color: #F5F5F5; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3); align-content: center"
@@ -206,7 +115,7 @@
 			<MudTd DataLabel="Quantidade">@GetQuantity(context)</MudTd>
 			<MudTd DataLabel="Preço R$">@context.UnitPrice</MudTd>
 			<MudTd DataLabel="Valor Total">@GetTotalValue(context)</MudTd>
-			<MudTd DataLabel="Data">@context.TransactionDate.ToString("dd/MM/yyyy")</MudTd>
+			<MudTd DataLabel="Data">@context.TransactionDate.GetValueOrDefault().ToString("dd/MM/yyyy")</MudTd>
 		</RowTemplate>
 		<RowEditingTemplate></RowEditingTemplate>
 		<PagerContent>
@@ -269,5 +178,9 @@
 
 	.form-button {
 		margin-top: 4px;
+	}
+
+	.add-transactions-dialog-class {
+		backdrop-filter: blur(7px);
 	}
 </style>

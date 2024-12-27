@@ -1,0 +1,73 @@
+﻿@using InvestmentManager.Shared.Models
+@using InvestmentManager.Shared.Models.Enums
+@using System.Globalization
+<MudDialog Style="height: 600px;">
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="12">
+                <MudSelectExtended ItemCollection="assetTickers"
+                                   SearchBox="true"
+                                   SearchBoxAutoFocus="true"
+                                   SearchFunc="@(new Func<string, string, bool>(SearchItems))"
+                                   T="string"
+                                   Virtualize="true"
+                                   AnchorOrigin="Origin.TopCenter"
+                                   Variant="Variant.Outlined"
+                                   Class="mb-4"
+                                   Placeholder="Insira o código de um ativo"
+                                   Value="@SelectedAssetText"
+                                   ValueChanged="OnTickerValueChanged"/>
+            </MudItem>
+        </MudGrid>
+
+        @if (!string.IsNullOrEmpty(SelectedAssetText))
+        {
+            @foreach (var transaction in Transactions)
+            {
+                <MudGrid>
+                    <MudItem xs="12" md="2">
+                        <MudNumericField Format="N0" Culture="@CultureInfo.GetCultureInfo("pt-BR")" Immediate="true" @bind-Value="transaction.Quantity" HideSpinButtons="true" Label="Quantidade" Variant="Variant.Outlined" Step=".2M" Required="true" />
+                        
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect Label="Compra/Venda" Variant="Variant.Outlined" T="bool" @bind-Value="transaction.IsBuy" Required="true">
+                            <MudSelectItem Value="true">Compra</MudSelectItem>
+                            <MudSelectItem Value="false">Venda</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudDatePicker @bind-date="transaction.TransactionDate" Label="Data" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudTextField @bind-Value="transaction.UnitPrice" Label="Preço" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="2">
+                        <MudTextField @bind-Value="transaction.OtherCosts" Label="Outros custos" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="1">
+                        <MudIconButton OnClick="() => RemoveAsset(transaction)"
+                                       Icon="@Icons.Material.Filled.Delete"
+                                       aria-label="delete" />
+                    </MudItem>
+                </MudGrid>
+            }
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudButton OnClick="AddAsset" Variant="Variant.Text" Color="Color.Primary" Class="mt-2">
+                        + Mais compras de @SelectedAssetText
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Info"
+                   OnClick="SubmitAndAddAnotherAsync">Salvar e adicionar mais um</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Info"
+                   OnClick="SubmitAsync">Salvar</MudButton>
+    </DialogActions>
+</MudDialog>

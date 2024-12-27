@@ -45,6 +45,26 @@ namespace InvestmentManager.Services
             }
         }
 
+        public async Task AddRangeAsync(List<Transaction> transactions)
+        {
+            if (transactions is null || transactions.Count == 0)
+            {
+                _logger.LogError("Attempted to add a empty ou null transactions list");
+                throw new ArgumentNullException(nameof(transactions), "Transactions cannot be null or empty.");
+            }
+
+            try
+            {
+                _transactionRepository.AddRange(transactions);
+                await _transactionRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding transactions.");
+                throw;
+            }
+        }
+
         public async Task<List<Transaction>> GetUserTransactionsAsync(string? userId)
         {
             ArgumentException.ThrowIfNullOrEmpty(userId, nameof(userId));
@@ -107,7 +127,7 @@ namespace InvestmentManager.Services
                 return transactions.Select(t => new TransactionDto
                 {
                     IsBuy = t.IsBuy,
-                    TransactionDate = t.TransactionDate,
+                    TransactionDate = t.TransactionDate.GetValueOrDefault(),
                     Quantity = t.Quantity,
                     UnitPrice = t.UnitPrice,
                     OtherCosts = t.OtherCosts,
@@ -288,6 +308,12 @@ namespace InvestmentManager.Services
             int interval = monthlyInvestments.Count() >= 60 ? 3 : 2;
 
             return monthlyInvestments.Where((date, index) => index % interval == interval - 1 || index == monthlyInvestments.Count() - 1);
+        }
+
+        public async Task ClearCacheAsync(string userId)
+        {
+            await _cacheService.KeyDeleteAsync(CacheKeysFactory.UserTransactions(userId));
+            await _cacheService.KeyDeleteAsync(CacheKeysFactory.UserTransactionsDto(userId));
         }
 
         private static IEnumerable<MonthlyHolding> TakeLastHoldings(IEnumerable<MonthlyHolding> monthlyHoldings, int monthsToInclude)
