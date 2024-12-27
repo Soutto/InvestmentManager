@@ -137,7 +137,9 @@ namespace InvestmentManager.Services
                 })
                 .ToList();
 
-            return CreatePortfolio(portfolioAssets);
+            var monthlyInvestment = await GetMonthlyInvestmentEvolutionAsync(userId, 1);
+            decimal totalPurchase = monthlyInvestment.Investments[monthlyInvestment.Investments.Count - 1].TotalInvestment;
+            return CreatePortfolio(portfolioAssets, totalPurchase);
         }
 
         public async Task RemoveAsync(Guid id)
@@ -549,11 +551,12 @@ namespace InvestmentManager.Services
                 holdings[isin] = newQuantity;
         }
 
-        private static Portfolio CreatePortfolio(List<PortfolioAsset> assets)
+        private static Portfolio CreatePortfolio(List<PortfolioAsset> assets, decimal totalPurchase)
         {
             return new Portfolio
             {
-                PortfolioAssets = assets
+                PortfolioAssets = assets,
+                TotalPurchaseValue = totalPurchase
             };
         }
 

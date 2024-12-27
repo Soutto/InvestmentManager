@@ -24,50 +24,50 @@ namespace InvestmentManager.Services
         public async Task AddRangeAsync(List<AssetMonthlyPriceDto> assetsMonthlyPriceDtos)
         {
             ////Teste para inserir varios no banco
-            //assetsMonthlyPriceDtos = [];
-            //int year = 2014;
-            //int month = 1;
-            //decimal priceAALR3 = 10m; // Starting price for AALR3
-            //decimal priceABCB4 = 15m; // Starting price for ABCB4
-            //Random random = new();
+            assetsMonthlyPriceDtos = [];
+            int year = 2014;
+            int month = 1;
+            decimal priceAALR3 = 10m; // Starting price for AALR3
+            decimal priceABCB4 = 15m; // Starting price for ABCB4
+            Random random = new();
 
-            //while (!(month == 12 && year == 2024))
-            //{
-            //    // Simulate price fluctuations with a random factor
-            //    decimal priceChangeAALR3 = (decimal)(random.NextDouble() - 0.5) * 2; // -1 to +1
-            //    decimal priceChangeABCB4 = (decimal)(random.NextDouble() - 0.5) * 2; // -1 to +1
+            while (!(month == 12 && year == 2024))
+            {
+                // Simulate price fluctuations with a random factor
+                decimal priceChangeAALR3 = (decimal)(random.NextDouble() - 0.5) * 2; // -1 to +1
+                decimal priceChangeABCB4 = (decimal)(random.NextDouble() - 0.5) * 2; // -1 to +1
 
-            //    // Apply the change, but ensure it doesn't go below zero
-            //    priceAALR3 += priceChangeAALR3;
-            //    priceABCB4 += priceChangeABCB4;
-            //    if (priceAALR3 < 0) priceAALR3 = 0;
-            //    if (priceABCB4 < 0) priceABCB4 = 0;
+                // Apply the change, but ensure it doesn't go below zero
+                priceAALR3 += priceChangeAALR3;
+                priceABCB4 += priceChangeABCB4;
+                if (priceAALR3 < 0) priceAALR3 = 0;
+                if (priceABCB4 < 0) priceABCB4 = 0;
 
-            //    // Add a slight upward trend over time
-            //    priceAALR3 += 0.05m;
-            //    priceABCB4 += 0.08m;
+                // Add a slight upward trend over time
+                priceAALR3 += 0.05m;
+                priceABCB4 += 0.08m;
 
-            //    assetsMonthlyPriceDtos.Add(new AssetMonthlyPriceDto
-            //    {
-            //        Ticker = "AALR3",
-            //        Year = year,
-            //        Month = month,
-            //        Price = priceAALR3
-            //    });
-            //    assetsMonthlyPriceDtos.Add(new AssetMonthlyPriceDto
-            //    {
-            //        Ticker = "ABCB4",
-            //        Year = year,
-            //        Month = month,
-            //        Price = priceABCB4
-            //    });
-            //    month++;
-            //    if (month == 13)
-            //    {
-            //        month = 1;
-            //        year++;
-            //    }
-            //}
+                assetsMonthlyPriceDtos.Add(new AssetMonthlyPriceDto
+                {
+                    Ticker = "AALR3",
+                    Year = year,
+                    Month = month,
+                    Price = priceAALR3
+                });
+                assetsMonthlyPriceDtos.Add(new AssetMonthlyPriceDto
+                {
+                    Ticker = "ABCB4",
+                    Year = year,
+                    Month = month,
+                    Price = priceABCB4
+                });
+                month++;
+                if (month == 13)
+                {
+                    month = 1;
+                    year++;
+                }
+            }
             /////
             if (assetsMonthlyPriceDtos.Count == 0)
             {
@@ -201,7 +201,7 @@ namespace InvestmentManager.Services
                         AssetIsinCode = asset.IsinCode,
                         Year = date.Year,
                         Month = date.Month,
-                        Price = asset.IsinCode == "BRAALRACNOR6" ? 20m : 25m //TODO - VOLTAR PARA -> asset.CurrentPrice
+                        Price = asset.CurrentPrice
                     });
                 }
             }

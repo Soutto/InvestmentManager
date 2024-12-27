@@ -1,5 +1,6 @@
 ﻿@using ApexCharts
 @using InvestmentManager.Shared.Models.Application
+@using System.Globalization
 
 @page "/portfolio"
 
@@ -54,7 +55,7 @@ else
 					<MudItem xs="12" sm="6" md="4">
 						<div class="pa-4">
 							<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Valor do Patrimônio</MudText>
-							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@PortfolioValue.ToString("C")</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@_portfolio.TotalCurrentValue.ToString("C")</MudText>
 						</div>
 					</MudItem>
 
@@ -66,25 +67,23 @@ else
 									<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Total Investido</MudText>
 								</ChildContent>
 								<TooltipContent>
-									<MudText Typo="Typo.h6">Valor Total Investido:</MudText>
 									<MudText Typo="Typo.body2">Calculado com base no método FIFO (Primeiro a Entrar, Primeiro a Sair).<br>O valor considera o custo das ações compradas e subtrai o custo das ações vendidas, começando pelas primeiras aquisições.<br>Assim, reflete o investimento ainda alocado nos ativos atuais.</MudText>
-									<MudIcon Icon="@Icons.Material.Filled.Star" />
 								</TooltipContent>
 							</MudTooltip>
-							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@TotalInvested.ToString("C")</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@_portfolio.TotalPurchaseValue.ToString("C")</MudText>
 						</div>
 					</MudItem>
 
 					<!-- Lucro/Prejuízo -->
 					<MudItem xs="12" sm="6" md="4">
 						<div class="pa-4"
-							 style="background-color: @(ProfitLoss >= 0 ? "#DCEFDD" : "#FFCCD4"); border-radius: 10px; text-align: center;">
+							 style="background-color: @(_portfolio.PercentagePerformance >= 0 ? "#DCEFDD" : "#FFCCD4"); border-radius: 10px; text-align: center;">
 							<MudText Typo="Typo.h6" GutterBottom="true">Lucro/Prejuízo</MudText>
-							<MudText Typo="Typo.h4" Style="font-weight: bold; " Color="@(ProfitLoss >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
-								@ProfitLoss.ToString("C")
+							<MudText Typo="Typo.h4" Style="font-weight: bold; " Color="@(_portfolio.MonetaryPerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@_portfolio.MonetaryPerformance.ToString("C")
 							</MudText>
-							<MudText Typo="Typo.subtitle2" Color="@(ProfitLossPercentage >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
-								@(ProfitLossPercentage >= 0 ? "+" : "")@ProfitLossPercentage.ToString("P")
+							<MudText Typo="Typo.subtitle2" Color="@(_portfolio.PercentagePerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@(_portfolio.PercentagePerformance >= 0 ? "+" : "-")@_portfolio.PercentagePerformance.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))%
 							</MudText>
 						</div>
 					</MudItem>
@@ -110,13 +109,13 @@ else
 							   Options="_chartOptions">
 						<ApexPointSeries TItem="DataItem"
 										 Items="_heritageDataItems"
-										 Name="Patrimônio total (R$)"
+										 Name="Patrimônio total"
 										 SeriesType="SeriesType.Line"
 										 XValue="e => e.Date"
 										 YValue="e=> e.Revenue" />
 						<ApexPointSeries TItem="DataItem"
 										 Items="_investmentDataItems"
-										 Name="Valor total investido (R$)"
+										 Name="Valor total investido"
 										 SeriesType="SeriesType.Line"
 										 XValue="e => e.Date"
 										 YValue="e=> e.Revenue" />
