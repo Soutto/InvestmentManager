@@ -22,30 +22,46 @@
 
         @if (!string.IsNullOrEmpty(SelectedAssetText))
         {
-            @foreach (var transaction in Transactions)
+            @foreach (var input in TransactionInputs.Inputs)
             {
                 <MudGrid>
                     <MudItem xs="12" md="2">
-                        <MudNumericField Format="N0" Culture="@CultureInfo.GetCultureInfo("pt-BR")" Immediate="true" @bind-Value="transaction.Quantity" HideSpinButtons="true" Label="Quantidade" Variant="Variant.Outlined" Step=".2M" Required="true" />
-                        
+                        @if (isFractional)
+                        {
+                            <MudNumericField Label="Quantidade*" @bind-Value="input.Quantity" Variant="Variant.Outlined" Culture="@CultureInfo.GetCultureInfo("pt-BR")" />
+                        }
+                        else
+                        {
+                            <MudTextField Mask="@(new RegexMask(@"^[1-9]\d{0,8}$"))" @bind-Value="input.Quantity" Label="Quantidade*" Variant="Variant.Outlined" />
+                        }                  
                     </MudItem>
                     <MudItem xs="12" md="3">
-                        <MudSelect Label="Compra/Venda" Variant="Variant.Outlined" T="bool" @bind-Value="transaction.IsBuy" Required="true">
+                        <MudSelect Label="Compra/Venda" Variant="Variant.Outlined" T="bool" @bind-Value="input.IsBuy" Required="true">
                             <MudSelectItem Value="true">Compra</MudSelectItem>
                             <MudSelectItem Value="false">Venda</MudSelectItem>
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" md="2">
-                        <MudDatePicker @bind-date="transaction.TransactionDate" Label="Data" Variant="Variant.Outlined" Required="true" />
+                        <MudDatePicker @bind-date="input.TransactionDate" Label="Data" Variant="Variant.Outlined" Required="true" />
                     </MudItem>
                     <MudItem xs="12" md="2">
-                        <MudTextField @bind-Value="transaction.UnitPrice" Label="Preço" Variant="Variant.Outlined" Required="true" />
+                        <MudNumericField HideSpinButtons="true" 
+                                            Format="C2" 
+                                            Immediate="true" 
+                                            Label="Preço*" @bind-Value="input.UnitPrice" 
+                                            Variant="Variant.Outlined" 
+                                            Culture="@CultureInfo.GetCultureInfo("pt-BR")" />
                     </MudItem>
                     <MudItem xs="12" md="2">
-                        <MudTextField @bind-Value="transaction.OtherCosts" Label="Outros custos" Variant="Variant.Outlined" />
+                        <MudNumericField Format="C2"
+                                            HideSpinButtons="true"
+                                            Label="Outros custos" 
+                                            @bind-Value="input.OtherCosts" 
+                                            Variant="Variant.Outlined" 
+                                            Culture="@CultureInfo.GetCultureInfo("pt-BR")" />
                     </MudItem>
                     <MudItem xs="12" md="1">
-                        <MudIconButton OnClick="() => RemoveAsset(transaction)"
+                        <MudIconButton OnClick="() => RemoveAsset(input)"
                                        Icon="@Icons.Material.Filled.Delete"
                                        aria-label="delete" />
                     </MudItem>

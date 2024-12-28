@@ -18,6 +18,7 @@ using DadosDeMercadoClient.Interfaces;
 using DadosDeMercadoClient.Clients;
 using StackExchange.Redis;
 using ApexCharts;
+using InvestmentManager.Shared.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +72,11 @@ builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<IAssetMonthlyPriceService, AssetMonthlyPriceService>();
 builder.Services.AddScoped<INewsService, NewsService>();
 
+#endregion
+
+#region Validators
+builder.Services.AddScoped<TransactionInputValidator>();
+builder.Services.AddScoped<TransactionInputsValidator>();
 #endregion
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
