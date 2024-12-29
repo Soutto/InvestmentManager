@@ -75,8 +75,7 @@ builder.Services.AddScoped<INewsService, NewsService>();
 #endregion
 
 #region Validators
-builder.Services.AddScoped<TransactionInputValidator>();
-builder.Services.AddScoped<TransactionInputsValidator>();
+builder.Services.AddScoped<TransactionDtoValidator>();
 #endregion
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>

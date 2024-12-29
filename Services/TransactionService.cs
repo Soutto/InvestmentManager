@@ -333,14 +333,14 @@ namespace InvestmentManager.Services
         private static (DateTime startMonth, DateTime endMonth) GetFirstAndLastTransactionDate(List<TransactionDto> transactions)
         {
             var firstTransactionDate = transactions.First().TransactionDate;
-            var startMonth = new DateTime(firstTransactionDate.Year, firstTransactionDate.Month, 1);
+            var startMonth = new DateTime(firstTransactionDate.GetValueOrDefault().Year, firstTransactionDate.GetValueOrDefault().Month, 1);
             var endMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             return (startMonth, endMonth);
         }
 
         private static Dictionary<DateTime, List<TransactionDto>> GroupTransactionsByMonth(List<TransactionDto> transactions)
         {
-            return transactions.GroupBy(t => new DateTime(t.TransactionDate.Year, t.TransactionDate.Month, 1))
+            return transactions.GroupBy(t => new DateTime(t.TransactionDate.GetValueOrDefault().Year, t.TransactionDate.GetValueOrDefault().Month, 1))
                                .ToDictionary(g => g.Key, g => g.OrderBy(t => t.TransactionDate).ToList());
         }
 

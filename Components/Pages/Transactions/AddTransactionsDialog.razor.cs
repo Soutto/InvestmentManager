@@ -1,212 +1,243 @@
-﻿using FluentValidation.Results;
-using InvestmentManager.Services.Interfaces;
+﻿using InvestmentManager.Services.Interfaces;
 using InvestmentManager.Shared.Models;
+using InvestmentManager.Shared.Models.DTOs;
 using InvestmentManager.Shared.Models.Enums;
-using InvestmentManager.Shared.Models.Inputs;
 using InvestmentManager.Shared.Validators;
 using InvestmentManager.Utils;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace InvestmentManager.Components.Pages.Transactions
 {
     public partial class AddTransactionsDialog : ComponentBase
     {
-		[Inject] private AuthenticationStateProvider _authStateProvider { get; set; } = default!;
-		[Inject] private IAssetService _assetService { get; set; } = default!;
-		[Inject] private ITransactionService _transactionService { get; set; } = default!;
-        [Inject] private ISnackbar _snackbar { get; set; } = default!;
+        #region Dependencies (Injected Services)
+        [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+        [Inject] private IAssetService AssetService { get; set; } = default!;
+        [Inject] private ITransactionService TransactionService { get; set; } = default!;
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        #endregion
 
-        [CascadingParameter]
-        private MudDialogInstance MudDialog { get; set; } = default!;
-		private string? userId = string.Empty;
-		private List<Asset> assets = [];
+        #region Properties
+        protected List<TransactionDto> Transactions { get; set; } = [];
+        protected string SelectedAssetText { get; set; } = string.Empty;
+        protected Asset? SelectedAsset { get; set; } = default!;
+        protected List<string> AssetTickers { get; set; } = [];
+        #endregion
 
-		[Parameter]
-		public List<string> assetTickers { get; set; } = [];
+        #region Fields
+        private MudDialogInstance _mudDialog = default!;
+        private string? _userId = string.Empty;
+        private List<Asset> _assets = [];
+        #endregion
 
-		private string SelectedAssetText { get; set; } = string.Empty;
-		private Asset? SelectedAsset { get; set; } = default!;
-		private TransactionInputs TransactionInputs { get; set; } = new();
-
-		private async Task LoadAssetsAsync() => assets = await _assetService.GetAllAsync();
-		private async Task LoadAssetsTickersAsync() => assetTickers = await _assetService.GetAllAssetsTickersAsync();
-		private static string GetAssetTypeDescription(AssetType assetType) => assetType.ToDescription();
-		private bool isFractional;
+        #region Protected Methods
+        protected void Cancel() => _mudDialog.Cancel();
 
         protected override async Task OnInitializedAsync()
-		{
-			userId = await GetUserIdAsync();
+        {
+            _userId = await GetUserIdAsync();
 
-			if (string.IsNullOrEmpty(userId))
-			{
-				throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
-			}
+            if (string.IsNullOrEmpty(_userId))
+            {
+                throw new InvalidOperationException("User ID is not available. Please check Identity configuration.");
+            }
 
-			await LoadDataAsync();
-		
-		}
-		private async Task LoadDataAsync()
-		{
-			await LoadAssetsAsync();
-			await LoadAssetsTickersAsync();
-		}
-		private async Task<string?> GetUserIdAsync()
-		{
-			var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            await LoadDataAsync();
 
-			return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
-		}
-		private TransactionInput InitializeNewTransactionInput()
-		{
-			string quantity = SelectedAsset?.Type == AssetType.Stock ? "1" : "1,00000000";
-
-            return new TransactionInput
-			{
-				TransactionDate = DateTime.Today,
-				UnitPrice = "1,00",
-				OtherCosts = "0,00",
-				Quantity = quantity.ToString(),
-				IsBuy = true,
-				IsFractional = isFractional
-            };
         }
-		private static bool SearchItems(string value, string searchString)
-		{
-			if (searchString == "")
-			{
-				return true;
-			}
 
-			if (value.StartsWith(searchString, StringComparison.CurrentCultureIgnoreCase))
-			{
-				return true;
-			}
+        protected async Task SubmitAsync()
+        {
+            bool success = await ProcessTransactionsAsync();
 
-			return false;
-		}
-		private void OnTickerValueChanged(string value)
-		{
-			SelectedAssetText = value;
-            SelectedAsset = assets.Find(a => a.Ticker.Equals(SelectedAssetText, StringComparison.OrdinalIgnoreCase));
-			isFractional = SelectedAsset?.Type != AssetType.Stock;
-			TransactionInputs.Inputs = [InitializeNewTransactionInput()];
-			
+            if (success)
+            {
+                _mudDialog.Close();
+            }
         }
-		private void AddAsset()
-		{
 
-            TransactionInputs.Inputs.Add(InitializeNewTransactionInput());
-			StateHasChanged();
-		}
+        protected async Task SubmitAndAddAnotherAsync()
+        {
+            await ProcessTransactionsAsync();
+        }
 
-		private void RemoveAsset(TransactionInput transaction)
-		{
-            TransactionInputs.Inputs.Remove(transaction);
+        protected static bool SearchItems(string value, string searchString)
+        {
+            if (searchString == "")
+            {
+                return true;
+            }
+
+            if (value.StartsWith(searchString, StringComparison.CurrentCultureIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        protected void AddAsset()
+        {
+            Transactions.Add(InitializeNewTransactionDto());
             StateHasChanged();
         }
 
-		private async Task SubmitAndAddAnotherAsync()
+        protected void RemoveAsset(TransactionDto transaction)
         {
-			var validator = new TransactionInputsValidator();
-			var validationResult = validator.Validate(TransactionInputs);
+            Transactions.Remove(transaction);
+            StateHasChanged();
+        }
+        #endregion
 
-			if (validationResult.IsValid)
-			{
-                await AddTransactionsAsync();
-                string transactionWord = TransactionInputs.Inputs.Count > 1 ? "Transações adicionadas" : "Transação adicionada";
-                ClearDialog();
-                StateHasChanged();
-                _snackbar.Add($"{transactionWord} com sucesso.", Severity.Success);
-            }
-			else
-            {
-                _snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
-                string errorsMessages = BuildErrorsMessages(validationResult);
+        #region Private Methods
+        private async Task LoadAssetsAsync() => _assets = await AssetService.GetAllAsync();
+        private async Task LoadAssetsTickersAsync() => AssetTickers = await AssetService.GetAllAssetsTickersAsync();
+        private static string GetAssetTypeDescription(AssetType assetType) => assetType.ToDescription();
+        private bool IsTransactionListEmpty() => Transactions.Count == 0;
 
-                _snackbar.Add(new MarkupString(errorsMessages), Severity.Error);
-            }
-
+        private async Task LoadDataAsync()
+        {
+            await LoadAssetsAsync();
+            await LoadAssetsTickersAsync();
         }
 
-        private static string BuildErrorsMessages(ValidationResult validationResult)
+        private async Task<string?> GetUserIdAsync()
         {
-            StringBuilder message = new();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-            var groupedErrors = validationResult.Errors
-                .GroupBy(error => GetInputIndex(error))
-                .OrderBy(group => group.Key);
+            return authState.User.Identity?.IsAuthenticated == true ? authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+        }
 
-            foreach (var group in groupedErrors)
+        private TransactionDto InitializeNewTransactionDto()
+        {
+            decimal quantity = SelectedAsset?.Type == AssetType.Stock ? 1m : 1.00000000m;
+
+            return new TransactionDto
             {
-                message.AppendLine($"Linha {group.Key}:<br>");
-                foreach (var error in group)
+                IsBuy = true,
+                TransactionDate = DateTime.Today,
+                UnitPrice = 1.00m,
+                OtherCosts = 0.00m,
+                Quantity = quantity,
+                AssetIsinCode = SelectedAsset?.IsinCode ?? string.Empty,
+                Asset = SelectedAsset ?? new Asset(),
+            };
+        }
+
+        private void OnTickerValueChanged(string value)
+        {
+            SelectedAssetText = value;
+            SelectedAsset = _assets.Find(a => a.Ticker.Equals(SelectedAssetText, StringComparison.OrdinalIgnoreCase));
+            Transactions = [InitializeNewTransactionDto()];
+        }
+
+        private async Task<bool> ProcessTransactionsAsync()
+        {
+            if (IsTransactionListEmpty())
+            {
+                ShowAlert(new MarkupString("Adicione uma transação."), Severity.Error);
+                return false;
+            }
+
+            var (isValid, errorMessage) = await TryValidateTransactionsAsync();
+
+            if (!isValid)
+            {
+                ShowAlert(new MarkupString(errorMessage), Severity.Error);
+                return false;
+            }
+
+            await AddTransactionsAsync();
+
+            string successMessage = (Transactions.Count > 1 ? "Transações adicionadas" : "Transação adicionada") + " com sucesso.";
+
+            ClearDialog();
+
+            ShowAlert(new MarkupString(successMessage), Severity.Success);
+
+            StateHasChanged();
+
+            return true;
+        }
+        private async Task<(bool IsValid, string ErrorMessage)> TryValidateTransactionsAsync()
+        {
+            string errorMessage = await ValidateTransactionsAsync();
+            return (string.IsNullOrEmpty(errorMessage), errorMessage);
+        }
+
+        private void ShowAlert(MarkupString message, Severity severity)
+        {
+            Snackbar.Add(message, severity);
+        }
+
+        private async Task<string> ValidateTransactionsAsync()
+        {
+            string errorMessage = string.Empty;
+            var validator = new TransactionDtoValidator();
+
+            for (int i = 0; i < Transactions.Count; i++)
+            {
+                var validationResult = await validator.ValidateAsync(Transactions[i]);
+                if (!validationResult.IsValid)
                 {
-                    message.AppendLine($"- {error.ErrorMessage}<br>");
+                    errorMessage += ExtractErrorsMessages(i + 1, validationResult);
                 }
-				message.AppendLine("<br>");
             }
 
-            return message.ToString();
+            return errorMessage;
         }
 
-        private static int GetInputIndex(ValidationFailure error)
+        private string ExtractErrorsMessages(int rowNumber, FluentValidation.Results.ValidationResult validationResult)
         {
-            if (error.PropertyName.Contains("Inputs["))
-            {
-                var match = Regex.Match(error.PropertyName, @"Inputs\[(\d+)\]");
-                if (match.Success && int.TryParse(match.Groups[1].Value, out var index))
-                {
-                    return index + 1;
-                }
-            }
-            return 0; 
-        }
+            StringBuilder errorMessage = new();
 
+            errorMessage.AppendLine($"Linha {rowNumber}:<br>");
+
+            foreach (var error in validationResult.Errors)
+            {
+                errorMessage.AppendLine($"- {error.ErrorMessage}<br>");
+            }
+
+            if (rowNumber < Transactions.Count)
+            {
+                errorMessage.AppendLine("<br>");
+            }
+
+            return errorMessage.ToString();
+        }
 
         private void ClearDialog()
         {
             SelectedAssetText = string.Empty;
-            TransactionInputs.Inputs = [];
+            SelectedAsset = null;
+            Transactions = [];
         }
 
-        private async Task SubmitAsync()
-		{
-			await AddTransactionsAsync();
-            _snackbar.Add($"Transações adicionadas com sucesso.", Severity.Success);
-            MudDialog.Close();
-        }
-
-        private void Cancel() => MudDialog.Cancel();
-
-		private async Task AddTransactionsAsync()
-		{
-            if (TransactionInputs.Inputs.Count > 0)
+        private async Task AddTransactionsAsync()
+        {
+            if (Transactions.Count > 0)
             {
-				var transactions = ConvertToTransaction(TransactionInputs);
-                await _transactionService.AddRangeAsync(transactions);
-				await _transactionService.ClearCacheAsync(userId!);
+                var createDate = DateTime.Now;
+
+                await TransactionService.AddRangeAsync(Transactions.Select(t => new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = _userId!,
+                    CreateDate = createDate,
+                    IsBuy = t.IsBuy,
+                    TransactionDate = t.TransactionDate,
+                    UnitPrice = t.UnitPrice,
+                    OtherCosts = t.OtherCosts,
+                    Quantity = t.Quantity,
+                    AssetIsinCode = SelectedAsset?.IsinCode
+                }).ToList());
+
+                await TransactionService.ClearCacheAsync(_userId!);
             }
         }
-
-		private List<Transaction> ConvertToTransaction(TransactionInputs inputs)
-		{
-            return inputs.Inputs.Select(input => new Transaction
-			{
-				Id = Guid.NewGuid(),
-				UserId = userId,
-				IsBuy = input.IsBuy,
-				TransactionDate = input.TransactionDate,
-				Quantity = Convert.ToDecimal(input.Quantity),
-				UnitPrice = Convert.ToDecimal(input.UnitPrice),
-				OtherCosts = Convert.ToDecimal(input.OtherCosts),
-				CreateDate = DateTime.Now,
-				AssetIsinCode = SelectedAsset?.IsinCode
-			}).ToList();
-		}
-
+        #endregion
     }
 }

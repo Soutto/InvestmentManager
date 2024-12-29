@@ -27,28 +27,25 @@
 			  Elevation="3"
 			  Width="97%" >
 	<MudTable Items="@FilteredTransactions"
-			  Loading="@isLoading" Dense="false"
+			  Loading="@IsLoading" Dense="false"
 			  Hover="true"
 			  ReadOnly="false"
 			  CanCancelEdit="true"
 			  Filter="new Func<Transaction,bool>(FilterTransactions)"
-			  @bind-SelectedItem="selectedItem1"
+			  @bind-SelectedItem="SelectedItem1"
 			  SortLabel="Sort By"
-			  CommitEditTooltip="Commit Edit"
-			  OnCommitEditClick="@(() => _snackbar.Add(" Commit Edit Handler Invoked"))"
-			  IsEditRowSwitchingBlocked="true"
 			  Striped="true"
 			  Style="background-color: #F5F5F5;"
 			  Height="680px" Elevation="0">
 		<ToolBarContent>
 			<!-- Espaçamento entre botões e tabela -->
 			<!-- Filtro e Pesquisa -->
-			<MudSelect T="string" @bind-Value="selectedTransactionType" Variant="Variant.Text" class="filtro-e-pesquisa">
+			<MudSelect T="string" @bind-Value="_selectedTransactionType" Variant="Variant.Text" class="filtro-e-pesquisa">
 				<MudSelectItem Value="@TransactionTypeAll">Todos</MudSelectItem>
 				<MudSelectItem Value="@TransactionTypePurchase">Compras</MudSelectItem>
 				<MudSelectItem Value="@TransactionTypeSale">Vendas</MudSelectItem>
 			</MudSelect>
-			<MudTextField @bind-Value="searchString" Placeholder="Pesquisar (Código ou Data)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+			<MudTextField @bind-Value="SearchString" Placeholder="Pesquisar (Código ou Data)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
 			<MudSpacer />
 			<MudSpacer />
 			<MudSpacer />
