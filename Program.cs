@@ -19,6 +19,8 @@ using DadosDeMercadoClient.Clients;
 using StackExchange.Redis;
 using ApexCharts;
 using InvestmentManager.Shared.Validators;
+using DadosDeMercadoClient.Interfaces.Brapi;
+using DadosDeMercadoClient.Clients.Brapi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddHttpClient<IAssetClient, AssetClient>();
 builder.Services.AddHttpClient<INewsClient, NewsClient>();
+builder.Services.AddHttpClient<IBrapiAssetClient, BrapiAssetClient>();
 builder.Services.AddControllers();
 
 #region Repositories

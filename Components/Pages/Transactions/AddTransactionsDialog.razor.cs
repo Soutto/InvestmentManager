@@ -25,16 +25,17 @@ namespace InvestmentManager.Components.Pages.Transactions
         protected string SelectedAssetText { get; set; } = string.Empty;
         protected Asset? SelectedAsset { get; set; } = default!;
         protected List<string> AssetTickers { get; set; } = [];
+        [CascadingParameter]
+        private MudDialogInstance MudDialog { get; set; } = default!;
         #endregion
 
         #region Fields
-        private MudDialogInstance _mudDialog = default!;
         private string? _userId = string.Empty;
         private List<Asset> _assets = [];
         #endregion
 
         #region Protected Methods
-        protected void Cancel() => _mudDialog.Cancel();
+        protected void Cancel() => MudDialog.Cancel();
 
         protected override async Task OnInitializedAsync()
         {
@@ -55,7 +56,7 @@ namespace InvestmentManager.Components.Pages.Transactions
 
             if (success)
             {
-                _mudDialog.Close();
+                MudDialog.Close();
             }
         }
 
@@ -81,12 +82,23 @@ namespace InvestmentManager.Components.Pages.Transactions
 
         protected void AddAsset()
         {
+            if (Transactions.Count >= 10)
+            {
+                ShowAlert(new MarkupString("Adicione no máximo 10 transações por vez."), Severity.Info);
+                return;
+            }
+
             Transactions.Add(InitializeNewTransactionDto());
             StateHasChanged();
         }
 
         protected void RemoveAsset(TransactionDto transaction)
         {
+            if (Transactions.Count <= 1)
+            {
+                ShowAlert(new MarkupString("Adicione ao menos uma transação."), Severity.Info);
+                return;
+            }
             Transactions.Remove(transaction);
             StateHasChanged();
         }

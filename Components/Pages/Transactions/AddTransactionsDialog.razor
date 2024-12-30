@@ -1,7 +1,7 @@
 ﻿@using InvestmentManager.Shared.Models
 @using InvestmentManager.Shared.Models.Enums
 @using System.Globalization
-<MudDialog Style="height: 600px;">
+<MudDialog Style="height: 600px;" TitleClass="justify-center">
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" md="12">
@@ -28,8 +28,7 @@
                     <MudItem xs="12" md="2">
                         @if (SelectedAsset.Type == AssetType.Stock)
                         {
-                            <MudNumericField HelperText="@transaction.Quantity.ToString()"
-                                             HideSpinButtons="true"
+                            <MudNumericField HideSpinButtons="true"
                                              Label="Quantidade*"
                                              @bind-Value="transaction.Quantity"
                                              Variant="Variant.Outlined"
@@ -38,8 +37,7 @@
                         }
                         else
                         {
-                            <MudNumericField HelperText="@transaction.Quantity.ToString()"
-                                             HideSpinButtons="true"
+                            <MudNumericField HideSpinButtons="true"
                                              Label="Quantidade*"
                                              @bind-Value="transaction.Quantity"
                                              Variant="Variant.Outlined"
@@ -63,8 +61,7 @@
                                          Immediate="true"
                                          Label="Preço*" @bind-Value="transaction.UnitPrice"
                                          Variant="Variant.Outlined"
-                                         Culture="@CultureInfo.GetCultureInfo("pt-BR")"
-                                         HelperText="@transaction.UnitPrice.ToString(CultureInfo.GetCultureInfo("pt-BR"))" />
+                                         Culture="@CultureInfo.GetCultureInfo("pt-BR")"/>
                     </MudItem>
                     <MudItem xs="12" md="2">
                         <MudNumericField Format="C2"
@@ -73,8 +70,7 @@
                                          Label="Outros custos"
                                          @bind-Value="transaction.OtherCosts"
                                          Variant="Variant.Outlined"
-                                         Culture="@CultureInfo.GetCultureInfo("pt-BR")"
-                                         HelperText="@transaction.OtherCosts.ToString(CultureInfo.GetCultureInfo("pt-BR"))" />
+                                         Culture="@CultureInfo.GetCultureInfo("pt-BR")" />
                     </MudItem>
                     <MudItem xs="12" md="1">
                         <MudIconButton OnClick="() => RemoveAsset(transaction)"
@@ -97,7 +93,7 @@
         <MudButton OnClick="Cancel">Cancelar</MudButton>
         <MudButton Variant="Variant.Filled"
                    Color="Color.Info"
-                   OnClick="SubmitAndAddAnotherAsync">Salvar e adicionar mais um</MudButton>
+                   OnClick="SubmitAndAddAnotherAsync">Salvar e adicionar mais uma</MudButton>
         <MudButton Variant="Variant.Filled"
                    Color="Color.Info"
                    OnClick="SubmitAsync">Salvar</MudButton>

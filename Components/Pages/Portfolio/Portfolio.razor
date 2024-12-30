@@ -55,7 +55,7 @@ else
 					<MudItem xs="12" sm="6" md="4">
 						<div class="pa-4">
 							<MudText Typo="Typo.h6" GutterBottom="true" Align="MudBlazor.Align.Center">Valor do Patrimônio</MudText>
-							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@_portfolio.TotalCurrentValue.ToString("C")</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@PortfolioObj.TotalCurrentValue.ToString("C")</MudText>
 						</div>
 					</MudItem>
 
@@ -70,20 +70,20 @@ else
 									<MudText Typo="Typo.body2">Calculado com base no método FIFO (Primeiro a Entrar, Primeiro a Sair).<br>O valor considera o custo das ações compradas e subtrai o custo das ações vendidas, começando pelas primeiras aquisições.<br>Assim, reflete o investimento ainda alocado nos ativos atuais.</MudText>
 								</TooltipContent>
 							</MudTooltip>
-							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@_portfolio.TotalPurchaseValue.ToString("C")</MudText>
+							<MudText Typo="Typo.h4" Align="MudBlazor.Align.Center" Style="font-weight: bold;">@PortfolioObj.TotalPurchaseValue.ToString("C")</MudText>
 						</div>
 					</MudItem>
 
 					<!-- Lucro/Prejuízo -->
 					<MudItem xs="12" sm="6" md="4">
 						<div class="pa-4"
-							 style="background-color: @(_portfolio.PercentagePerformance >= 0 ? "#DCEFDD" : "#FFCCD4"); border-radius: 10px; text-align: center;">
+							 style="background-color: @(PortfolioObj.PercentagePerformance >= 0 ? "#DCEFDD" : "#FFCCD4"); border-radius: 10px; text-align: center;">
 							<MudText Typo="Typo.h6" GutterBottom="true">Lucro/Prejuízo</MudText>
-							<MudText Typo="Typo.h4" Style="font-weight: bold; " Color="@(_portfolio.MonetaryPerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
-								@_portfolio.MonetaryPerformance.ToString("C")
+							<MudText Typo="Typo.h4" Style="font-weight: bold; " Color="@(PortfolioObj.MonetaryPerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@PortfolioObj.MonetaryPerformance.ToString("C")
 							</MudText>
-							<MudText Typo="Typo.subtitle2" Color="@(_portfolio.PercentagePerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
-								@(_portfolio.PercentagePerformance >= 0 ? "+" : "-")@_portfolio.PercentagePerformance.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))%
+							<MudText Typo="Typo.subtitle2" Color="@(PortfolioObj.PercentagePerformance >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+								@(PortfolioObj.PercentagePerformance >= 0 ? "+" : "-")@PortfolioObj.PercentagePerformance.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))%
 							</MudText>
 						</div>
 					</MudItem>
@@ -105,7 +105,7 @@ else
 				</MudButtonGroup>
 				<div style="height: 100%; min-height: 500px;">
 					<ApexChart TItem="DataItem"
-							   @ref=_chart
+							   @ref=Chart
 							   Options="_chartOptions">
 						<ApexPointSeries TItem="DataItem"
 										 Items="_heritageDataItems"
@@ -129,7 +129,7 @@ else
 					<MudItem xs="12" md="12">
 						<MudText Typo="Typo.h6" Align="MudBlazor.Align.Center" GutterBottom="true">Desempenho dos Ativos</MudText>
 						<MudTable Elevation="0"
-								  Items="@_portfolio.PortfolioAssets"
+								  Items="@PortfolioObj.PortfolioAssets"
 								  Hover="true"
 								  Dense="true"
 								  Style="border-radius: 10px; background-color: #F5F5F5;"
@@ -197,7 +197,7 @@ else
 										@(context.PriceChangePercentage > 0 ? "+" : "")@context.PriceChangePercentage.ToString("P")
 									</MudText>
 								</MudTd>
-								<MudTd DataLabel="Allocation %">@((context.CurrentTotalValue / _portfolio.TotalCurrentValue).ToString("P"))</MudTd>
+								<MudTd DataLabel="Allocation %">@((context.CurrentTotalValue / PortfolioObj.TotalCurrentValue).ToString("P"))</MudTd>
 							</RowTemplate>
 						</MudTable>
 					</MudItem>

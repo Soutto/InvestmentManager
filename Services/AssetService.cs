@@ -4,19 +4,20 @@ using InvestmentManager.Services.Interfaces;
 using DadosDeMercadoClient.Interfaces;
 using InvestmentManager.Exceptions;
 using InvestmentManager.Shared.Factories;
+using DadosDeMercadoClient.Interfaces.Brapi;
 
 namespace InvestmentManager.Services
 {
     /// <summary>
     /// Provides services for managing assets with caching.
     /// </summary>
-    public class AssetService(IRepository<Asset> assetRepository, ILogger<AssetService> logger, ICacheService cacheService, IAssetClient assetClient) : IAssetService
+    public class AssetService(IRepository<Asset> assetRepository, ILogger<AssetService> logger, ICacheService cacheService, IAssetClient assetClient, IBrapiAssetClient brapiAssetClient) : IAssetService
     {
         private readonly IRepository<Asset> _assetRepository = assetRepository;
         private readonly ILogger<AssetService> _logger = logger;
         private readonly ICacheService _cacheService = cacheService;
         private readonly IAssetClient _assetClient = assetClient;
-
+        private readonly IBrapiAssetClient _brapiAssetClient = brapiAssetClient;
 
         #region Public Methods
 

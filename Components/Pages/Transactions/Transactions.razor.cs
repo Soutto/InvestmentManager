@@ -84,15 +84,6 @@ namespace InvestmentManager.Components.Pages.Transactions
             StartUndoTimer(transaction.Id);
         }
 
-        protected static string GetTotalValue(Transaction transaction)
-        {
-            var culture = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
-            var format = transaction.Asset?.Type == AssetType.Cryptocurrency
-                ? "N8"
-                : "N2";
-            return transaction.TotalValue.ToString(format, culture);
-        }
-
         protected static string GetQuantity(Transaction transaction)
         {
             var format = transaction.Asset?.Type == AssetType.Cryptocurrency ? "N8" : "N0";

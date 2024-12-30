@@ -6,36 +6,70 @@ namespace InvestmentManager.Components.Pages
 {
     public partial class News() : ComponentBase
     {
-        [Inject] private IJSRuntime _jsRuntime { get; set; } = default!;
-        [Inject] private INewsService _newsService { get; set; } = default!;
+        #region Dependencies (Injected Services)
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+        [Inject] private INewsService NewsService { get; set; } = default!;
+        #endregion
 
-        private IEnumerable<InvestmentManager.Shared.Models.Application.News> newsList = [];
-        private int currentPage = 1;
+        #region Properties
+        protected IEnumerable<Shared.Models.Application.News> PagedNewsList
+        {
+            get
+            {
+                _pagedNewsList = _newsList.Skip((CurrentPage - 1) * itemsPerPage).Take(itemsPerPage);
+                return _pagedNewsList;
+            }
+            set
+            {
+                _pagedNewsList = value;
+            }
+        }
+
+        protected int TotalPages
+        {
+            get
+            {
+                _totalPages = (int)Math.Ceiling((double)(_newsList?.Count() ?? 0) / itemsPerPage);
+                return _totalPages;
+            }
+            set
+            {
+                _totalPages = value;
+            }
+        }
+        protected int CurrentPage { get; set; } = 1;
+        #endregion
+        
+        #region Fields
+        private IEnumerable<Shared.Models.Application.News> _pagedNewsList = [];
+        private int _totalPages;
+        private IEnumerable<Shared.Models.Application.News> _newsList = [];
         private int itemsPerPage = 9;
+        #endregion
 
+        #region Protected Methods
         protected override async Task OnInitializedAsync()
         {
-            newsList = await FetchNewsAsync();
+            _newsList = await FetchNewsAsync();
         }
-
-        private async Task<IEnumerable<InvestmentManager.Shared.Models.Application.News>> FetchNewsAsync()
-        {
-            return await _newsService.GetAllAsync();
-        }
-
-        private IEnumerable<InvestmentManager.Shared.Models.Application.News> PagedNewsList => newsList.Skip((currentPage - 1) * itemsPerPage).Take(itemsPerPage);
-
-        private int TotalPages => (int)Math.Ceiling((double)(newsList?.Count() ?? 0) / itemsPerPage);
 
         private void PageChanged(int i)
         {
-            currentPage = i;
+            CurrentPage = i;
             StateHasChanged();
         }
 
         private async Task NavigateToUrlAsync(string url)
         {
-            await _jsRuntime.InvokeVoidAsync("open", url, "_blank");
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         }
+        #endregion
+
+        #region Private Methods
+        private async Task<IEnumerable<InvestmentManager.Shared.Models.Application.News>> FetchNewsAsync()
+        {
+            return await NewsService.GetAllAsync();
+        }
+        #endregion
     }
 }

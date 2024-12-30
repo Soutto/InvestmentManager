@@ -2,7 +2,7 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
 
-	@if (newsList == null)
+	@if (_newsList == null)
 	{
 		<MudProgressCircular Color="Color.Primary" Indeterminate="true" />
 	}
@@ -37,7 +37,7 @@
 				</MudItem>
 			}
 		</MudGrid>
-		<MudPagination SelectedChanged="PageChanged" @bind-Page="currentPage" Count="@TotalPages" Class="mt-2" />
+		<MudPagination SelectedChanged="PageChanged" @bind-Page="CurrentPage" Count="@TotalPages" Class="mt-2" />
 	}
 </MudContainer>
 
